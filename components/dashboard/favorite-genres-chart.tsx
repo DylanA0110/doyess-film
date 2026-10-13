@@ -17,7 +17,7 @@ export function FavoriteGenresChart({ stats }: FavoriteGenresChartProps) {
   let cumulativePercent = 0;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/8 bg-[#101009] p-6 backdrop-blur-xl">
+    <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-zinc-900/80 p-6">
       {/* Header */}
       <div className="flex items-center justify-between pb-4">
         <h3 className="text-base font-bold tracking-tight text-[#F4F6F3]">

@@ -35,6 +35,86 @@ export const initialStats: DashboardStats = {
     name: 'Thriller',
     delta: '+12%',
   },
+  ratingDistribution: [2, 4, 8, 12, 18, 24, 32, 28, 14, 6],
+  dominantGenreName: 'Thriller',
+  dominantGenrePercent: 32,
+  catalogSinceYear: 2014,
+  lastUpdatedLabel: '12 oct. 2026, 14:32',
+  topDirectors: [
+    {
+      name: 'Christopher Nolan',
+      photoUrl: 'https://image.tmdb.org/t/p/w185/xuAIuYSmsUzKlUMBFGVZaWsY3DZ.jpg',
+      avgRating: 8.6,
+      movieCount: 12,
+    },
+    {
+      name: 'Martin Scorsese',
+      photoUrl: 'https://image.tmdb.org/t/p/w185/wo2hJpn04vbtmh0B9utCFdsQhxM.jpg',
+      avgRating: 8.4,
+      movieCount: 9,
+    },
+    {
+      name: 'David Fincher',
+      photoUrl: 'https://image.tmdb.org/t/p/w185/xuAIuYSmsUzKlUMBFGVZaWsY3DZ.jpg',
+      avgRating: 8.2,
+      movieCount: 7,
+    },
+  ],
+  pendingRecommendations: 42,
+  topActors: [
+    {
+      name: 'Leonardo DiCaprio',
+      photoUrl: 'https://image.tmdb.org/t/p/w185/wo2hJpn04vbtmh0B9utCFdsQhxM.jpg',
+      count: 14,
+    },
+    {
+      name: 'Tom Hardy',
+      photoUrl: 'https://image.tmdb.org/t/p/w185/n3UilIEdA0J2e1iEkmTtHmIqEW.jpg',
+      count: 9,
+    },
+  ],
+  topActresses: [
+    {
+      name: 'Cate Blanchett',
+      photoUrl: 'https://image.tmdb.org/t/p/w185/1ckL8b2Bb6soyjKu3TPHU2w6Yg.jpg',
+      count: 8,
+    },
+  ],
+  moviesRated10: [
+    {
+      id: 'mock-10',
+      title: 'Interstellar',
+      year: 2014,
+      genres: ['Ciencia ficción', 'Drama'],
+      posterUrl: 'https://image.tmdb.org/t/p/w342/yQvGrMoipbRoddT0ZR8tPoR7NfX.jpg',
+      userRating: 10,
+    },
+  ],
+  pendingEnrichmentCount: 0,
+  withoutPosterCount: 0,
+  unenrichedCount: 0,
+  ratingSummary: { median: 7.5, highPercent: 62, highCount: 158 },
+  genreInsightsByName: {},
+  dominantGenreInsight: {
+    genre: 'Thriller',
+    percent: 32,
+    titlesWithGenre: 28,
+    explanation:
+      'Thriller domina tu perfil porque etiqueta muchas de tus calificaciones recientes y concentra un tercio de tus etiquetas de género.',
+    sampleTitles: [],
+  },
+  titleKindBreakdown: {
+    movies: { count: 220, avgRating: 7.9, screenTimeString: '320h' },
+    series: { count: 36, avgRating: 8.2, screenTimeString: '48h' },
+  },
+  recurringCast: [
+    {
+      name: 'Leonardo DiCaprio',
+      photoUrl: 'https://image.tmdb.org/t/p/w185/wo2hJpn04vbtmh0B9utCFdsQhxM.jpg',
+      count: 14,
+      roleLabel: 'actor',
+    },
+  ],
 };
 
 export const featuredRecommendations: DashboardMovie[] = [

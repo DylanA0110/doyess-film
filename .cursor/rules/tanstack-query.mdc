@@ -1,0 +1,12 @@
+---
+description: TanStack Query for client-side data fetching and mutations
+alwaysApply: true
+---
+
+# TanStack Query
+
+- Use `@tanstack/react-query` for client reads/writes after the initial Server Component load. Avoid ad-hoc `useEffect` + `fetch`.
+- Server Components (e.g. `app/dashboard/page.tsx`) load Supabase data on the server first.
+- Use stable `queryKey`s: `['cinephile-stats', userId]`, `['dashboard', userId]`.
+- CSV import: `useMutation` → on success `queryClient.invalidateQueries` and `router.refresh()` when needed.
+- Defaults: generous `staleTime` for user data, `refetchOnWindowFocus: false`, `retry: 1` on queries.

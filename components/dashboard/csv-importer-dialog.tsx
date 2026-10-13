@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -11,29 +12,45 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { parseImdbExport } from '@/lib/imdb/parse-csv';
-import type { ImportedTitle } from '@/lib/imdb/types';
-import type { DashboardStats, DashboardMovie } from './types';
-import { FileSpreadsheet, Upload, CheckCircle2, Sparkles, AlertCircle } from 'lucide-react';
+import { useImdbImport } from '@/hooks/use-imdb-import';
+import { runTmdbEnrichPending } from '@/lib/imdb/run-tmdb-enrich-batches';
+import { ImportProgressPanel } from '@/components/dashboard/import-progress-panel';
+import { FileSpreadsheet, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface CsvImporterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onImportComplete: (stats: DashboardStats, movies: DashboardMovie[], totalCount: number) => void;
+  userId: string;
+  onImportSuccess?: () => void;
 }
 
 export function CsvImporterDialog({
   open,
   onOpenChange,
-  onImportComplete,
+  userId,
+  onImportSuccess,
 }: CsvImporterDialogProps) {
-  const [isProcessing, setIsProcessing] = React.useState(false);
+  const router = useRouter();
+  const importMutation = useImdbImport(userId);
   const [error, setError] = React.useState<string | null>(null);
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [successCount, setSuccessCount] = React.useState<number | null>(null);
+  const [phaseMessage, setPhaseMessage] = React.useState('Leyendo CSV…');
+  const [progress, setProgress] = React.useState(12);
+  const [enrichRemaining, setEnrichRemaining] = React.useState(0);
+  const [retryingTmdb, setRetryingTmdb] = React.useState(false);
 
-  const processCsvText = (csvText: string, name: string) => {
-    setIsProcessing(true);
+  const onPhase = React.useCallback((message: string, pct?: number) => {
+    setPhaseMessage(message);
+    if (pct != null) setProgress(pct);
+  }, []);
+
+  const processCsvText = async (csvText: string, name: string) => {
     setError(null);
+    setSuccessCount(null);
+    setEnrichRemaining(0);
+    setPhaseMessage('Leyendo CSV…');
+    setProgress(15);
 
     try {
       const importedTitles = parseImdbExport(csvText);
@@ -41,104 +58,27 @@ export function CsvImporterDialog({
         throw new Error('El archivo CSV no contiene registros válidos de IMDb.');
       }
 
-      // Calculate statistics
-      let totalRuntime = 0;
-      let totalRating = 0;
-      let ratedCount = 0;
-      const genreCounts: Record<string, number> = {};
-      const directorCounts: Record<string, number> = {};
-
-      importedTitles.forEach((t) => {
-        if (t.runtimeMinutes) {
-          totalRuntime += t.runtimeMinutes;
-        }
-        if (t.yourRating) {
-          totalRating += t.yourRating;
-          ratedCount++;
-        }
-        t.genres.forEach((g) => {
-          genreCounts[g] = (genreCounts[g] || 0) + 1;
-        });
-        t.directors.forEach((d) => {
-          directorCounts[d] = (directorCounts[d] || 0) + 1;
-        });
+      setPhaseMessage('Guardando calificaciones…');
+      setProgress(35);
+      const result = await importMutation.mutateAsync({
+        titles: importedTitles,
+        onPhaseChange: onPhase,
       });
-
-      const avg = ratedCount > 0 ? Number((totalRating / ratedCount).toFixed(1)) : 8.0;
-
-      // Top genres
-      const sortedGenres = Object.entries(genreCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
-
-      const totalGenreCount = sortedGenres.reduce((acc, curr) => acc + curr[1], 0) || 1;
-      const genreColors = ['#8A0201', '#5B1E31', '#C80000', '#801818', '#D97706'];
-
-      const topGenres = sortedGenres.map(([name, count], idx) => ({
-        name,
-        count,
-        percentage: Math.round((count / totalGenreCount) * 80),
-        color: genreColors[idx % genreColors.length],
-      }));
-      topGenres.push({
-        name: 'Otros',
-        count: Math.round(importedTitles.length * 0.2),
-        percentage: 20,
-        color: '#52525B',
-      });
-
-      // Top director
-      const topDirectorEntry = Object.entries(directorCounts).sort((a, b) => b[1] - a[1])[0];
-      const topDirectorName = topDirectorEntry ? topDirectorEntry[0] : 'Christopher Nolan';
-
-      const stats: DashboardStats = {
-        moviesWatched: importedTitles.length,
-        moviesWatchedDelta: `+${importedTitles.length} importadas`,
-        averageRating: avg,
-        averageRatingDelta: 'Base IMDb real',
-        screenTimeMinutes: totalRuntime,
-        screenTimeString: `${Math.round(totalRuntime / 60)}h (${(totalRuntime / 1000).toFixed(1)}k m)`,
-        screenTimeDelta: `${importedTitles.length} títulos`,
-        topGenres,
-        topDirector: {
-          name: topDirectorName,
-          photoUrl: 'https://image.tmdb.org/t/p/w185/xuAIuYSmsUzKlUMBFGVZaWsY3DZ.jpg',
-          rating: 9.1,
-        },
-        topActor: {
-          name: 'Leonardo DiCaprio',
-          photoUrl: 'https://image.tmdb.org/t/p/w185/wo2hJpn04vbtmh0B9utCFdsQhxM.jpg',
-          count: 14,
-        },
-        perfectMovie: {
-          title: importedTitles.find((m) => m.yourRating === 10 || m.yourRating === 9)?.title ?? 'Infiltrados',
-          posterUrl: 'https://image.tmdb.org/t/p/w342/nT97ifVT2J1yMQmeq20Qblg61T.jpg',
-          score: 10,
-        },
-        growingGenre: {
-          name: sortedGenres[0]?.[0] ?? 'Drama',
-          delta: '+15%',
-        },
-      };
-
-      const parsedMovies: DashboardMovie[] = importedTitles.slice(0, 10).map((t, i) => ({
-        id: `csv-${i}-${t.imdbId}`,
-        title: t.title,
-        year: t.year ?? undefined,
-        userRating: t.yourRating ?? undefined,
-        genres: t.genres,
-        director: t.directors[0],
-        posterUrl: 'https://image.tmdb.org/t/p/w342/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
-        relativeDate: t.dateRated ?? 'Reciente',
-      }));
+      setProgress(100);
+      if (result.imported === 0) {
+        throw new Error(
+          result.errors[0] ??
+            'No se importó ninguna calificación. Revisa que el CSV tenga notas del 1 al 10.',
+        );
+      }
 
       setFileName(name);
-      setSuccessCount(importedTitles.length);
-      onImportComplete(stats, parsedMovies, importedTitles.length);
+      setSuccessCount(result.imported);
+      setEnrichRemaining(result.enrichRemaining ?? 0);
+      onImportSuccess?.();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al procesar el archivo CSV');
-    } finally {
-      setIsProcessing(false);
     }
   };
 
@@ -149,7 +89,7 @@ export function CsvImporterDialog({
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      processCsvText(text, file.name);
+      void processCsvText(text, file.name);
     };
     reader.onerror = () => {
       setError('No se pudo leer el archivo seleccionado');
@@ -157,25 +97,11 @@ export function CsvImporterDialog({
     reader.readAsText(file, 'utf-8');
   };
 
-  const handleLoadSampleCsv = async () => {
-    setIsProcessing(true);
-    setError(null);
-    try {
-      const res = await fetch('/sample-imdb.csv');
-      if (!res.ok) {
-        throw new Error('No se pudo cargar el archivo base sample-imdb.csv');
-      }
-      const text = await res.text();
-      processCsvText(text, 'IMDb Export Base de Dylan (c4af8a5e...csv)');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar el CSV de ejemplo');
-      setIsProcessing(false);
-    }
-  };
+  const isProcessing = importMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border border-[#8A0201]/30 bg-[#0A0505] text-[#F4F6F3] shadow-[0_24px_80px_rgba(0,0,0,0.85)] backdrop-blur-2xl sm:max-w-xl">
+      <DialogContent className="max-h-[min(92vh,44rem)] w-[calc(100vw-1.25rem)] max-w-xl overflow-y-auto border border-[#8A0201]/30 bg-[#0A0505] text-[#F4F6F3] shadow-[0_24px_80px_rgba(0,0,0,0.85)] backdrop-blur-2xl sm:w-full">
         <DialogHeader className="space-y-2">
           <div className="flex items-center gap-2 text-[#8A0201]">
             <FileSpreadsheet className="size-5" />
@@ -184,50 +110,45 @@ export function CsvImporterDialog({
             </Badge>
           </div>
           <DialogTitle className="text-2xl font-bold tracking-tight text-[#F4F6F3]">
-            Importar Historial IMDb
+            Importar historial IMDb
           </DialogTitle>
           <DialogDescription className="text-sm leading-6 text-[#F4F6F3]/70">
-            Carga tu archivo CSV exportado desde IMDb. Doyess Film extraerá tus calificaciones,
-            calculará métricas de tiempo y directores, y actualizará todo el panel.
+            Sube el CSV de calificaciones exportado desde IMDb. Tus datos se guardan en tu cuenta
+            y alimentan el panel de estadísticas.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#8A0201]/30 bg-black/40 p-8 text-center transition hover:border-[#8A0201] hover:bg-[#8A0201]/5">
-            <Upload className="size-10 text-[#8A0201] transition-transform group-hover:scale-110" />
-            <span className="mt-3 text-base font-semibold text-[#F4F6F3]">
-              Seleccionar o arrastrar archivo CSV
-            </span>
-            <span className="mt-1 text-xs text-[#F4F6F3]/50">
-              Exportación estándar de calificaciones IMDb (.csv)
-            </span>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileUpload}
-              className="hidden"
-              disabled={isProcessing}
-            />
-          </label>
-
-          <div className="relative flex items-center justify-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10" />
+          {isProcessing ? (
+            <div className="rounded-2xl border border-white/10 bg-black/40 px-6 py-8">
+              <ImportProgressPanel
+                phase={phaseMessage}
+                progress={progress}
+                detail="Importación IMDb y enriquecimiento TMDB por lotes."
+              />
             </div>
-            <span className="relative bg-[#0A0505] px-3 text-xs uppercase tracking-widest text-[#F4F6F3]/40">
-              O usa los datos base
-            </span>
-          </div>
+          ) : (
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#8A0201]/30 bg-black/40 p-8 text-center transition hover:border-[#8A0201] hover:bg-[#8A0201]/5">
+              <Upload className="size-10 text-[#8A0201]" />
+              <span className="mt-3 text-base font-semibold text-[#F4F6F3]">
+                Seleccionar archivo CSV
+              </span>
+              <span className="mt-1 text-xs text-[#F4F6F3]/50">
+                Exportación estándar de calificaciones IMDb (.csv)
+              </span>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={isProcessing}
+              />
+            </label>
+          )}
 
-          <Button
-            type="button"
-            onClick={handleLoadSampleCsv}
-            disabled={isProcessing}
-            className="w-full justify-center gap-2 rounded-xl border border-[#8A0201]/40 bg-[#140808] py-6 text-sm font-semibold text-[#F4F6F3] transition hover:bg-[#8A0201] hover:text-white"
-          >
-            <Sparkles className="size-4 text-[#8A0201] group-hover:text-white" />
-            Cargar CSV Base de Dylan (80 calificaciones IMDb)
-          </Button>
+          {fileName && successCount === null && !error && !isProcessing && (
+            <p className="text-xs text-[#F4F6F3]/50 text-center">Archivo: {fileName}</p>
+          )}
 
           {error && (
             <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">
@@ -237,21 +158,45 @@ export function CsvImporterDialog({
           )}
 
           {successCount !== null && (
-            <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 shrink-0" />
-                <span>
-                  ¡Importación completada! {successCount} títulos procesados correctamente.
-                </span>
+            <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-4 shrink-0" />
+                  <span>
+                    {successCount} calificaciones guardadas
+                    {fileName ? ` (${fileName})` : ''}.
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="border-emerald-500/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30"
+                >
+                  Ver dashboard
+                </Button>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="border-emerald-500/40 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30"
-              >
-                Ver Dashboard
-              </Button>
+              {enrichRemaining > 0 ? (
+                <p className="text-xs text-emerald-200/80">
+                  Quedan {enrichRemaining} títulos pendientes de TMDB.{' '}
+                  <button
+                    type="button"
+                    disabled={retryingTmdb}
+                    className="font-medium underline hover:no-underline disabled:opacity-50"
+                    onClick={() => {
+                      setRetryingTmdb(true);
+                      void runTmdbEnrichPending(onPhase)
+                        .then((r) => {
+                          setEnrichRemaining(r.remaining);
+                          router.refresh();
+                        })
+                        .finally(() => setRetryingTmdb(false));
+                    }}
+                  >
+                    {retryingTmdb ? 'Enriqueciendo…' : 'Completar ahora'}
+                  </button>
+                </p>
+              ) : null}
             </div>
           )}
         </div>

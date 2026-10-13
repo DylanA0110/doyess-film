@@ -1,0 +1,17 @@
+---
+description: Linear documentation reading order for Doyess Film
+alwaysApply: true
+---
+
+# Documentation order
+
+When changing UI or data flows, consult in order:
+
+1. `docs/doyess-film-design-system.md`
+2. `docs/home-mockup-reference.md`
+3. `docs/dashboard-mockup-reference.md`
+4. `docs/imdb-csv-base.md`
+5. `docs/imdb-export-tutorial.md`
+6. `docs/google-oauth-setup.md` (si falla el login con Google)
+
+Public landing uses static images in `public/`; TMDB enrichment is for authenticated dashboard flows (later phases).

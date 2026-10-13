@@ -1,7 +1,10 @@
+export type TitleKind = 'movie' | 'series';
+
 export type DashboardMovie = {
   id: string;
   title: string;
   year?: number;
+  titleKind?: TitleKind;
   rating?: number;
   userRating?: number;
   genres: string[];
@@ -12,6 +15,81 @@ export type DashboardMovie = {
   affinity?: number;
   reason?: string;
   relativeDate?: string;
+};
+
+export type DashboardDirectorStat = {
+  name: string;
+  photoUrl: string;
+  avgRating: number;
+  movieCount: number;
+};
+
+export type DashboardPersonStat = {
+  name: string;
+  photoUrl: string;
+  count: number;
+};
+
+export type DashboardCastInsight = DashboardPersonStat & {
+  roleLabel: 'actor' | 'actress';
+};
+
+export type TitleKindSlice = {
+  count: number;
+  avgRating: number;
+  screenTimeString: string;
+};
+
+export type TitleKindBreakdown = {
+  movies: TitleKindSlice;
+  series: TitleKindSlice;
+};
+
+export type DashboardGenreInsight = {
+  genre: string;
+  percent: number;
+  titlesWithGenre: number;
+  explanation: string;
+  sampleTitles: Array<{
+    id: string;
+    title: string;
+    year?: number;
+    userRating: number;
+    posterUrl: string;
+    titleKind: TitleKind;
+  }>;
+};
+
+export type ProfileHighlightKind =
+  | 'genre'
+  | 'ten'
+  | 'favoriteMovie'
+  | 'favoriteSeries'
+  | 'actor'
+  | 'director'
+  | 'daily';
+
+export type ProfileHighlight = {
+  kind: ProfileHighlightKind;
+  frontLabel: string;
+  backTitle: string;
+  kindLabel: string;
+  imageUrl: string;
+  blurb: string;
+  stat?: string;
+  roundImage?: boolean;
+  openGenreDetail?: boolean;
+};
+
+export type DailyPickResult = {
+  tmdbId: number;
+  tmdbVoteAverage?: number;
+  movie: DashboardMovie;
+  reason: string;
+  synopsis: string;
+  dayLabel: { month: string; day: string };
+  /** Sugerencia TMDB fuera del CSV calificado */
+  unwatched?: boolean;
 };
 
 export type DashboardStats = {
@@ -27,4 +105,27 @@ export type DashboardStats = {
   topActor: { name: string; photoUrl: string; count: number };
   perfectMovie: { title: string; posterUrl: string; score: number };
   growingGenre: { name: string; delta: string };
+  ratingDistribution: number[];
+  dominantGenreName: string;
+  dominantGenrePercent: number;
+  dominantGenreInsight: DashboardGenreInsight | null;
+  genreInsightsByName: Record<string, DashboardGenreInsight>;
+  titleKindBreakdown: TitleKindBreakdown;
+  recurringCast: DashboardCastInsight[];
+  catalogSinceYear: number | null;
+  lastUpdatedLabel: string | null;
+  topDirectors: DashboardDirectorStat[];
+  topActors: DashboardPersonStat[];
+  topActresses: DashboardPersonStat[];
+  moviesRated10: DashboardMovie[];
+  pendingRecommendations: number;
+  pendingEnrichmentCount: number;
+  withoutPosterCount: number;
+  /** @deprecated Usa withoutPosterCount */
+  unenrichedCount: number;
+  ratingSummary: {
+    median: number;
+    highPercent: number;
+    highCount: number;
+  };
 };

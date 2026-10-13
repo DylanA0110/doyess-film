@@ -1,34 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware';
+import { isDevSkipAuth } from '@/lib/auth/dev-mode';
 
 const protectedRoutes = ['/dashboard'];
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  if (isDevSkipAuth() && pathname === '/auth/login') {
+    const next = request.nextUrl.searchParams.get('next');
+    const destination =
+      next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+    return NextResponse.redirect(new URL(destination, request.url));
+  }
+
+  const isProtectedRoute = protectedRoutes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+
+  if (isProtectedRoute && isDevSkipAuth()) {
+    return NextResponse.next({ request });
+  }
+
   const response = NextResponse.next({ request });
   const supabase = createSupabaseMiddlewareClient(request, response);
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-  const isProtectedRoute = protectedRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-
-  const isDemo =
-    request.cookies.get('doyess_demo_session')?.value === 'true' ||
-    request.nextUrl.searchParams.get('demo') === 'true';
-
-  if (request.nextUrl.searchParams.get('demo') === 'true') {
-    response.cookies.set('doyess_demo_session', 'true', {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7,
-    });
-  }
-
-  if (isProtectedRoute && !user && !isDemo) {
-    const loginUrl = new URL('/', request.url);
-    loginUrl.searchParams.set('from', pathname);
+  if (isProtectedRoute && !user) {
+    const loginUrl = new URL('/auth/login', request.url);
+    loginUrl.searchParams.set('next', pathname);
 
     return NextResponse.redirect(loginUrl);
   }

@@ -3,147 +3,182 @@
 import * as React from 'react';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
-import { GreetingHero } from './greeting-hero';
-import { MetricCards } from './metric-cards';
-import { FeaturedRecommendation } from './featured-recommendation';
-import { UniverseCard } from './universe-card';
-import { RecentMoviesRow } from './recent-movies-row';
-import { QuoteCard } from './quote-card';
-import { RecentActivityCard } from './recent-activity-card';
-import { FavoriteGenresChart } from './favorite-genres-chart';
-import { ProfileTrendsCard } from './profile-trends-card';
 import { CsvImporterDialog } from './csv-importer-dialog';
-import {
-  initialStats,
-  featuredRecommendations,
-  recentActivityList,
-  recentMoviesGrid,
-} from './mock-data';
-import type { DashboardStats, DashboardMovie } from './types';
+import { DashboardEmptyState } from './dashboard-empty-state';
+import { DashboardParaVos } from './dashboard-para-vos';
+import { DashboardResumenWithData } from './dashboard-resumen-with-data';
+import type { DashboardStats, DashboardMovie, ProfileHighlight } from './types';
+
+const TAB_LABELS: Record<string, string> = {
+  resumen: 'Resumen',
+  'para-vos': 'Para vos',
+  laboratorio: 'Laboratorio de gustos',
+  biblioteca: 'Mi biblioteca',
+  analista: 'Analista de cine con IA',
+  explorar: 'Explorar',
+};
+
+const SIDEBAR_COLLAPSED_KEY = 'doyess-sidebar-collapsed';
 
 interface DashboardViewProps {
-  userName?: string;
+  userId: string;
+  userName: string;
+  displayName: string;
+  avatarUrl: string | null;
+  hasData: boolean;
+  stats: DashboardStats;
+  recentMovies: DashboardMovie[];
+  recentActivity: DashboardMovie[];
+  catalogMovies: DashboardMovie[];
+  profileHighlights: ProfileHighlight[];
+  schemaWarning?: string | null;
 }
 
-export function DashboardView({ userName = 'Dylan' }: DashboardViewProps) {
-  const [currentTab, setCurrentTab] = React.useState('inicio');
-  const [stats, setStats] = React.useState<DashboardStats>(initialStats);
-  const [recommendations, setRecommendations] = React.useState<DashboardMovie[]>(
-    featuredRecommendations,
-  );
-  const [recentMovies, setRecentMovies] = React.useState<DashboardMovie[]>(
-    recentMoviesGrid,
-  );
-  const [recentActivity, setRecentActivity] = React.useState<DashboardMovie[]>(
-    recentActivityList,
-  );
+export function DashboardView({
+  userId,
+  userName,
+  displayName,
+  avatarUrl,
+  hasData,
+  stats,
+  recentMovies,
+  catalogMovies,
+  profileHighlights,
+  schemaWarning,
+}: DashboardViewProps) {
+  const [currentTab, setCurrentTab] = React.useState('resumen');
   const [isImporterOpen, setIsImporterOpen] = React.useState(false);
-  const [isCustomDataLoaded, setIsCustomDataLoaded] = React.useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
 
-  const handleImportComplete = (
-    newStats: DashboardStats,
-    parsedMovies: DashboardMovie[],
-    totalCount: number,
-  ) => {
-    setStats(newStats);
-    if (parsedMovies.length > 0) {
-      setRecentMovies(parsedMovies.slice(0, 5));
-      setRecentActivity(parsedMovies.slice(0, 4));
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+      if (stored === '1') setSidebarCollapsed(true);
+    } catch {
+      /* ignore */
     }
-    setIsCustomDataLoaded(true);
+  }, []);
+
+  const toggleCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
   };
 
-  const handleResetData = () => {
-    setStats(initialStats);
-    setRecommendations(featuredRecommendations);
-    setRecentMovies(recentMoviesGrid);
-    setRecentActivity(recentActivityList);
-    setIsCustomDataLoaded(false);
-  };
+  const movieCountLabel = hasData
+    ? `${stats.moviesWatched} películas`
+    : 'Sin historial';
 
   return (
     <div className="flex min-h-screen bg-[#050000] text-[#F4F6F3]">
-      {/* 1. Left Sidebar */}
-      <Sidebar
-        currentTab={currentTab}
-        onSelectTab={setCurrentTab}
-        onOpenImporter={() => setIsImporterOpen(true)}
-        onResetData={handleResetData}
-        isCustomDataLoaded={isCustomDataLoaded}
-      />
+      <div className="hidden h-screen shrink-0 lg:block">
+        <Sidebar
+          currentTab={currentTab}
+          onSelectTab={setCurrentTab}
+          onOpenImporter={() => setIsImporterOpen(true)}
+          hasData={hasData}
+          displayName={displayName}
+          avatarUrl={avatarUrl}
+          subtitle={movieCountLabel}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleCollapsed}
+        />
+      </div>
 
-      {/* Main Right Area */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-y-auto">
-        {/* 2. Top Header */}
+      {mobileNavOpen ? (
+        <Sidebar
+          className="lg:hidden"
+          mobileOpen
+          onMobileClose={() => setMobileNavOpen(false)}
+          currentTab={currentTab}
+          onSelectTab={setCurrentTab}
+          onOpenImporter={() => setIsImporterOpen(true)}
+          hasData={hasData}
+          displayName={displayName}
+          avatarUrl={avatarUrl}
+          subtitle={movieCountLabel}
+        />
+      ) : null}
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
         <Topbar
           onOpenImporter={() => setIsImporterOpen(true)}
-          isCustomDataLoaded={isCustomDataLoaded}
+          onOpenMobileNav={() => setMobileNavOpen(true)}
+          hasData={hasData}
+          avatarUrl={avatarUrl}
+          displayName={displayName}
         />
 
-        {/* 3. Page Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-7 space-y-6 max-w-[1600px] mx-auto w-full">
-          {currentTab === 'inicio' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-[1.8fr_1.2fr] gap-6 items-start">
-              {/* Central Area (Left in Grid) */}
-              <div className="space-y-6 min-w-0">
-                {/* Greeting Hero */}
-                <GreetingHero userName={userName} />
-
-                {/* 3 Metrics Cards */}
-                <MetricCards stats={stats} />
-
-                {/* Big Featured Recommendation */}
-                <FeaturedRecommendation recommendations={recommendations} />
-
-                {/* Bottom Row: Universe + Recent Movies */}
-                <div className="grid grid-cols-1 md:grid-cols-[0.8fr_1.2fr] gap-6">
-                  <UniverseCard />
-                  <RecentMoviesRow movies={recentMovies} />
-                </div>
-              </div>
-
-              {/* Right Panel (Complementary Info) */}
-              <div className="space-y-6">
-                {/* Editorial Quote */}
-                <QuoteCard />
-
-                {/* Recent Activity */}
-                <RecentActivityCard activity={recentActivity} />
-
-                {/* Favorite Genres Donut Chart */}
-                <FavoriteGenresChart stats={stats} />
-
-                {/* Profile Trends */}
-                <ProfileTrendsCard stats={stats} />
-              </div>
-            </div>
+        <main
+          id="dashboard-main"
+          className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-6 lg:p-7"
+          tabIndex={-1}
+        >
+          {currentTab === 'resumen' ? (
+            hasData ? (
+              <DashboardResumenWithData
+                userId={userId}
+                userName={userName}
+                stats={stats}
+                recentMovies={recentMovies}
+                catalogMovies={catalogMovies}
+                onOpenImporter={() => setIsImporterOpen(true)}
+              />
+            ) : (
+              <DashboardEmptyState
+                userName={userName}
+                userId={userId}
+                schemaWarning={schemaWarning}
+              />
+            )
+          ) : currentTab === 'para-vos' ? (
+            hasData ? (
+              <DashboardParaVos
+                userName={userName}
+                userId={userId}
+                stats={stats}
+                highlights={profileHighlights}
+                hasData={hasData}
+              />
+            ) : (
+              <DashboardEmptyState
+                userName={userName}
+                userId={userId}
+                schemaWarning={schemaWarning}
+              />
+            )
           ) : (
-            /* Other Tabs Placeholder / View */
-            <div className="rounded-3xl border border-white/8 bg-[#101009] p-8 text-center space-y-4">
-              <h2 className="text-2xl font-bold capitalize text-[#F4F6F3]">
-                {currentTab.replace('-', ' ')}
+            <div className="space-y-4 rounded-2xl border border-white/8 bg-[#101009] p-6 text-center sm:p-8">
+              <h2 className="text-xl font-bold text-[#F4F6F3] sm:text-2xl">
+                {TAB_LABELS[currentTab] ?? 'Próximamente'}
               </h2>
-              <p className="text-sm text-[#F4F6F3]/60 max-w-md mx-auto">
-                Esta sección está conectada al universo cinematográfico de Doyess Film.
-                Puedes volver al panel de inicio o importar más datos desde tu archivo IMDb.
+              <p className="mx-auto max-w-md text-sm text-[#F4F6F3]/60">
+                Esta sección llegará en una fase posterior. Mientras tanto, usa el resumen y
+                importa tu CSV de IMDb cuando quieras.
               </p>
               <button
                 type="button"
-                onClick={() => setCurrentTab('inicio')}
+                onClick={() => setCurrentTab('resumen')}
                 className="inline-flex rounded-full bg-[#8A0201] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#a30302]"
               >
-                Volver al Inicio
+                Volver al resumen
               </button>
             </div>
           )}
         </main>
       </div>
 
-      {/* CSV Import Modal */}
       <CsvImporterDialog
         open={isImporterOpen}
         onOpenChange={setIsImporterOpen}
-        onImportComplete={handleImportComplete}
+        userId={userId}
       />
     </div>
   );

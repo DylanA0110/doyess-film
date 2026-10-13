@@ -1,0 +1,192 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.loader {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  background: #121110;
+  border-radius: 50%;
+  box-shadow: inset 0 0 7px rgba(138, 2, 1, 0.45);
+  border: 1px solid rgba(138, 2, 1, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.loader::before {
+  content: '';
+  position: absolute;
+  inset: 16px;
+  background: transparent;
+  border: 1px solid rgba(138, 2, 1, 0.5);
+  border-radius: 50%;
+  box-shadow: inset 0 0 5px rgba(138, 2, 1, 0.35);
+}
+
+.loader::after {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(138, 2, 1, 0.45);
+  box-shadow: inset 0 0 3px rgba(138, 2, 1, 0.35);
+}
+
+.sweep {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  transform-origin: top left;
+  animation: radarSweep 2s linear infinite;
+  box-shadow: -20px -60px 24px -40px rgba(138, 2, 1, 0.55);
+  border-top: 2px solid #8a0201;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow:
+    inset 0 0 8px 1px rgba(138, 2, 1, 0.45),
+    0 0 8px 1px rgba(138, 2, 1, 0.25);
+  animation: flyDot 32s linear infinite;
+}
+
+.dot1 {
+  --dot-start-top: 80px;
+  --dot-start-left: 112px;
+  --dot-end-top: 104px;
+  --dot-end-left: 16px;
+  animation-delay: 0s;
+}
+
+.dot2 {
+  --dot-start-top: 80px;
+  --dot-start-left: 0;
+  --dot-end-top: -2px;
+  --dot-end-left: 72px;
+  animation-delay: 0s;
+}
+
+.dot3 {
+  --dot-start-top: 80px;
+  --dot-start-left: 84px;
+  --dot-end-top: 14px;
+  --dot-end-left: 14px;
+  animation-delay: 0s;
+}
+
+.dot4 {
+  --dot-start-top: 88px;
+  --dot-start-left: 120px;
+  --dot-end-top: 112px;
+  --dot-end-left: 24px;
+  animation-delay: 0s;
+}
+
+.dot5 {
+  --dot-start-top: -4px;
+  --dot-start-left: 68px;
+  --dot-end-top: 100px;
+  --dot-end-left: 96px;
+  animation-delay: 4s;
+}
+
+@keyframes radarSweep {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes flyDot {
+  0% {
+    top: var(--dot-start-top);
+    left: var(--dot-start-left);
+  }
+  100% {
+    top: var(--dot-end-top);
+    left: var(--dot-end-left);
+  }
+  5%,
+  15%,
+  25%,
+  35%,
+  45%,
+  55%,
+  65%,
+  75%,
+  85%,
+  95% {
+    background: rgba(255, 255, 255, 1);
+    box-shadow:
+      inset 0 0 8px 1px rgba(138, 2, 1, 0.55),
+      0 0 12px 2px rgba(138, 2, 1, 0.65);
+  }
+  0%,
+  10%,
+  20%,
+  30%,
+  40%,
+  50%,
+  60%,
+  70%,
+  80%,
+  90% {
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow:
+      inset 0 0 8px 1px rgba(138, 2, 1, 0.4),
+      0 0 6px 1px rgba(138, 2, 1, 0.2);
+  }
+}
+
+.textBlock {
+  text-align: center;
+  max-width: 18rem;
+}
+
+.primary {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #f4f6f3;
+  line-height: 1.4;
+}
+
+.secondary {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: rgba(244, 246, 243, 0.45);
+  min-height: 1.25rem;
+}
+
+.progressTrack {
+  margin-top: 0.75rem;
+  height: 3px;
+  width: 100%;
+  max-width: 14rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 9999px;
+  background: #8a0201;
+  transition: width 0.45s ease-out;
+}

@@ -19,7 +19,8 @@ Doyess Film debe sentirse como una experiencia cinematográfica personal, editor
 
 - Titulares grandes y expresivos.
 - Etiquetas compactas para contexto, estado y afinidad.
-- Pósteres de TMDB como recurso visual principal.
+- En la **landing pública**, pósteres estáticos en `public/` (sin llamadas a TMDB).
+- En el **dashboard autenticado**, pósteres TMDB cuando el catálogo esté enriquecido (fases posteriores).
 - Fotogramas panorámicos y mosaicos desenfocados para profundidad narrativa.
 - Animaciones suaves, sin exceso de microinteracciones.
 

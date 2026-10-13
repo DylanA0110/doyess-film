@@ -21,19 +21,33 @@ type SupabaseServerCookies = {
 export async function createSupabaseServerClient(
   cookieMethods?: SupabaseServerCookies,
 ) {
+  if (cookieMethods) {
+    return createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: cookieMethods },
+    );
+  }
+
+  const cookieStore = await cookies();
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: cookieMethods ?? {
-        getAll: async () => {
-          const cookieStore = await cookies();
-
-          return cookieStore
-            .getAll()
-            .map(({ name, value }) => ({ name, value }));
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
         },
-        setAll: async () => {},
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // setAll desde Server Component sin mutación de cookies
+          }
+        },
       },
     },
   );

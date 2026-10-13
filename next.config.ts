@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    DEV_SKIP_AUTH: process.env.DEV_SKIP_AUTH ?? '',
+    NEXT_PUBLIC_DEV_SKIP_AUTH: process.env.NEXT_PUBLIC_DEV_SKIP_AUTH ?? '',
+  },
   images: {
     remotePatterns: [
       {
@@ -12,6 +15,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
     ],
   },
   experimental: {
@@ -21,7 +28,7 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   turbopack: {
     rules: {
-      '*.css': {
+      './app/globals.css': {
         loaders: ['@tailwindcss/turbopack'],
         as: '*.css',
       },

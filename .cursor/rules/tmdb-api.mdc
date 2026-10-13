@@ -1,0 +1,13 @@
+---
+description: TMDB API usage — server-only, optimized
+globs: lib/tmdb/**,app/api/tmdb/**,hooks/**
+alwaysApply: false
+---
+
+# TMDB API
+
+- Never call TMDB from the public landing (`components/home/**`). Use static assets in `public/`.
+- `TMDB_API_TOKEN` stays server-side only (`lib/tmdb/**`, `app/api/tmdb/**`).
+- Prefer find-by-`imdb_id` and batched enrichment over N title searches.
+- Use `useQuery` with long `staleTime` and stable keys; cache route handlers where appropriate.
+- Deduplicate `imdb_id` before enrichment jobs.
