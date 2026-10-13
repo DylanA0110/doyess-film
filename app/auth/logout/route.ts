@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
   });
 
   await supabase.auth.signOut();
+  response.cookies.delete('doyess_demo_session');
 
   return response;
 }

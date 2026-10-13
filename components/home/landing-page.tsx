@@ -1,301 +1,361 @@
 'use client';
 
+import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  FaCirclePlay,
-  FaGoogle,
-  FaHeart,
-  FaShieldHalved,
-  FaStar,
-} from 'react-icons/fa6';
-import { Badge } from '@/components/ui/badge';
+  Heart,
+  Star,
+  Bookmark,
+  Sparkles,
+  ArrowRight,
+  TrendingUp,
+  FileSpreadsheet,
+} from 'lucide-react';
+import { FaGoogle } from 'react-icons/fa6';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getTmdbPosterUrl } from '@/lib/tmdb/images';
-import { useFeaturedMovies } from '@/hooks/use-featured-movies';
-import type { FeaturedMovieCard } from '@/lib/tmdb/featured-movies';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
-export function LandingPage({ featuredMovies }: LandingPageProps) {
-  const featuredMoviesQuery = useFeaturedMovies();
-  const featuredMovies = featuredMoviesQuery.data ?? [];
-  const featuredMovie =
-    featuredMovies.find((item) => item.label === 'Infiltrados')?.movie ??
-    featuredMovies.find((item) => item.movie)?.movie ??
-    null;
-  const featuredAccent =
-    featuredMovies.find((item) => item.label === 'Infiltrados')?.accent ??
-    featuredMovies[0]?.accent ??
-    'Afinidad visual';
+export function LandingPage() {
+  const [showAuthInfo, setShowAuthInfo] = React.useState(false);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#050000] text-[#F4F6F3]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(138,2,1,0.26),transparent_32%),linear-gradient(180deg,#050000_0%,#030101_48%,#060704_100%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-168 bg-[radial-gradient(circle_at_bottom,rgba(138,2,1,0.16),transparent_55%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-52 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.72))]" />
+    <main className="relative min-h-screen overflow-hidden bg-[#050000] text-[#F4F6F3] select-none font-sans">
+      {/* Background Studio Lighting & Glow Effects */}
+      <div className="pointer-events-none absolute inset-0 z-0">
+        {/* Warm ambient backlight behind monitor on the right */}
+        <div className="absolute right-[10%] top-[25%] size-[600px] rounded-full bg-[radial-gradient(circle,rgba(215,60,20,0.18)_0%,rgba(138,2,1,0.12)_45%,transparent_70%)] blur-3xl" />
+        {/* Ambient cherry red top glow */}
+        <div className="absolute left-[15%] -top-20 size-[500px] rounded-full bg-[radial-gradient(circle,rgba(138,2,1,0.2)_0%,transparent_65%)] blur-3xl" />
+        {/* Subtle grid pattern / vignette */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(138,2,1,0.08),transparent_60%)]" />
+      </div>
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
-        <header className="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-black/55 px-4 py-4 shadow-[0_18px_80px_rgba(0,0,0,0.48)] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-2xl border border-[#8A0201]/30 bg-[#050000] shadow-[0_0_30px_rgba(138,2,1,0.28)]">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+        {/* 1. Header Navigation matching Image 2 */}
+        <header className="flex items-center justify-between py-2 sm:py-4">
+          {/* Brand Logo */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-transparent transition group-hover:scale-105">
               <Image
                 src="/doyess-logo.svg"
                 alt="Doyess Film"
-                width={28}
-                height={28}
+                width={32}
+                height={32}
                 priority
               />
             </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.32em] text-[#F4F6F3]/45">
-                Doyess Film
-              </p>
-              <p className="text-sm text-[#F4F6F3]/72">
-                Tu historial de cine, convertido en una experiencia visual.
-              </p>
-            </div>
+            <span className="text-xl font-bold tracking-tight text-[#F4F6F3]">
+              Doyess Film
+            </span>
           </Link>
 
-          <nav className="flex flex-wrap items-center gap-6 text-sm text-[#F4F6F3]/72">
-            <span className="transition hover:text-[#F4F6F3]">Inicio</span>
-            <span className="transition hover:text-[#F4F6F3]">
+          {/* Navigation items */}
+          <nav className="hidden md:flex items-center gap-8 text-sm text-[#F4F6F3]/70 font-medium">
+            <Link href="/" className="text-[#F4F6F3] hover:text-white transition">
+              Inicio
+            </Link>
+            <a href="#como-funciona" className="hover:text-[#F4F6F3] transition">
               Cómo funciona
-            </span>
-            <span className="transition hover:text-[#F4F6F3]">
+            </a>
+            <a href="#caracteristicas" className="hover:text-[#F4F6F3] transition">
               Características
-            </span>
+            </a>
           </nav>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              className="border-white/10 bg-white/5 text-[#F4F6F3] hover:bg-white/10"
+          {/* Top Actions */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard?demo=true"
+              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs sm:text-sm font-medium text-[#F4F6F3] transition hover:bg-white/10 hover:text-white"
             >
               Iniciar sesión
-            </Button>
-            <Button className="bg-[#8A0201] text-[#F4F6F3] shadow-[0_0_28px_rgba(138,2,1,0.35)] hover:bg-[#a10302]">
+            </Link>
+            <Link
+              href="/dashboard?demo=true"
+              className="rounded-full bg-[#8A0201] px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold text-white shadow-[0_4px_20px_rgba(138,2,1,0.4)] transition hover:bg-[#a30302]"
+            >
               Comenzar gratis
-            </Button>
+            </Link>
           </div>
         </header>
 
-        <section className="grid flex-1 gap-10 py-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:py-12">
-          <div className="space-y-8">
-            <div className="space-y-5">
-              <Badge className="border border-[#8A0201]/25 bg-[#8A0201]/10 text-[#F4F6F3]">
-                <FaShieldHalved className="mr-1.5 size-3.5" />
-                Conexión segura vía Supabase · importación en un minuto
-              </Badge>
-              <h1 className="max-w-3xl text-5xl font-black leading-[0.92] tracking-tight text-[#F4F6F3] sm:text-6xl xl:text-7xl">
-                Tu historia cinematográfica,
-                <span className="block bg-linear-to-r from-[#F4F6F3] via-[#8A0201] to-[#d11c1c] bg-clip-text text-transparent">
-                  analizada y redescubierta
-                </span>
-              </h1>
-              <p className="max-w-2xl text-base leading-8 text-[#F4F6F3]/72 sm:text-lg">
-                Importa tu historial de IMDb, descubre patrones en tus gustos y
-                encuentra qué ver con nuestro algoritmo personalizado.
-                Construimos una experiencia más cinematográfica que una interfaz
-                tradicional.
-              </p>
-            </div>
+        {/* 2. Hero Section matching Image 2 */}
+        <section className="grid flex-1 items-center gap-12 py-8 lg:grid-cols-[1.1fr_1.1fr] lg:py-16">
+          {/* Left Column: Headlines, Pitch and Google CTA */}
+          <div className="space-y-6 max-w-xl">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#F4F6F3] leading-[1.08]">
+              Tu historia cinematográfica, analizada y redescubierta
+            </h1>
 
-            <div className="flex flex-wrap gap-3">
-              <Button className="h-12 rounded-full bg-[#8A0201] px-6 text-[#F4F6F3] shadow-[0_12px_36px_rgba(138,2,1,0.32)] hover:bg-[#9f0201]">
-                <FaGoogle className="size-4" />
-                Comenzar gratis con Google
-              </Button>
-              <Button
-                variant="outline"
-                className="h-12 rounded-full border-white/10 bg-white/5 px-6 text-[#F4F6F3] hover:bg-white/10"
-              >
-                <FaCirclePlay className="size-4" />
-                Ver cómo funciona
-              </Button>
-            </div>
+            <p className="text-base sm:text-lg leading-relaxed text-[#F4F6F3]/75 font-normal">
+              Importa tu historial de IMDb, descubre patrones en tus gustos y encuentra qué ver con nuestro algoritmo personalizado.
+            </p>
 
-            <div className="flex flex-wrap gap-3 text-sm text-[#F4F6F3]/62">
-              {[
-                'CSV de IMDb',
-                'TMDB API',
-                'Dashboard activo',
-                'Afinidad por género',
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-full border border-white/8 bg-black/20 px-4 py-2"
+            {/* CTAs */}
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  size="lg"
+                  onClick={() => setShowAuthInfo(true)}
+                  className="rounded-full bg-[#8A0201] px-6 py-6 text-sm sm:text-base font-bold text-white shadow-[0_8px_32px_rgba(138,2,1,0.5)] transition hover:bg-[#a30302] hover:scale-[1.02]"
                 >
-                  {item}
-                </div>
-              ))}
+                  <FaGoogle className="mr-2.5 size-4" />
+                  <span>Comenzar gratis con Google</span>
+                  <span className="ml-2 text-xs opacity-80">▶</span>
+                </Button>
+
+                <Link
+                  href="/dashboard?demo=true"
+                  className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-[#F4F6F3] transition hover:border-[#8A0201] hover:bg-[#8A0201]/10 hover:text-white"
+                >
+                  <Sparkles className="mr-2 size-4 text-[#8A0201]" />
+                  <span>Entrar al Dashboard</span>
+                </Link>
+              </div>
+
+              {/* Subtext matching Mockup */}
+              <p className="text-xs text-[#F4F6F3]/50 font-normal">
+                Conexión segura vía Supabase • Importación de CSV en 1 minuto
+              </p>
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute -inset-10 rounded-full bg-[radial-gradient(circle,rgba(138,2,1,0.35),transparent_65%)] blur-3xl" />
-            <div className="relative overflow-hidden rounded-[34px] border border-[#8A0201]/20 bg-[linear-gradient(180deg,rgba(16,16,9,0.92),rgba(6,7,4,0.88))] p-4 shadow-[0_28px_120px_rgba(0,0,0,0.65)]">
-              <div className="grid gap-4 lg:grid-cols-[1.02fr_0.98fr]">
-                <Card className="overflow-hidden border-[#8A0201]/20 bg-black/25 shadow-[0_16px_40px_rgba(0,0,0,0.3)]">
-                  <CardContent className="p-0">
-                    <div className="relative aspect-3/4 overflow-hidden">
-                      <Image
-                        src={getTmdbPosterUrl(
-                          featuredMovie?.poster_path,
-                          'w780',
-                        )}
-                        alt={featuredMovie?.title ?? 'Infiltrados'}
-                        fill
-                        priority
-                        sizes="(max-width: 1024px) 100vw, 420px"
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,0,0,0.08),rgba(5,0,0,0.62)),radial-gradient(circle_at_top,transparent,rgba(0,0,0,0.4))]" />
-                      <div className="absolute inset-x-0 bottom-0 p-4">
-                        <div className="rounded-[24px] border border-white/10 bg-black/60 p-4 backdrop-blur-xl">
-                          <div className="flex items-end justify-between gap-3">
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.28em] text-[#F4F6F3]/55">
-                                Recomendación destacada
-                              </p>
-                              <p className="mt-2 text-[10px] uppercase tracking-[0.24em] text-[#F4F6F3]/50">
-                                {featuredAccent}
-                              </p>
-                              <h2 className="mt-2 text-2xl font-black text-[#F4F6F3]">
-                                {featuredMovie?.title ?? 'Infiltrados'}
-                              </h2>
-                              <p className="mt-2 text-sm text-[#F4F6F3]/70">
-                                {featuredMovie?.overview?.slice(0, 110) ??
-                                  'Afinidad estimada 94% por tu historial de crimen y drama.'}
-                                ...
-                              </p>
-                            </div>
-                            <div className="rounded-2xl border border-[#8A0201]/30 bg-[#8A0201]/15 px-3 py-2 text-right">
-                              <p className="text-[10px] uppercase tracking-[0.24em] text-[#F4F6F3]/55">
-                                Afinidad
-                              </p>
-                              <p className="text-2xl font-black text-[#F4F6F3]">
-                                94%
-                              </p>
-                            </div>
-                          </div>
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
-                              className="rounded-full bg-[#8A0201] text-[#F4F6F3] hover:bg-[#9f0201]"
-                            >
-                              <FaHeart className="size-3.5" />
-                              Me gusta
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="rounded-full border-white/10 bg-white/5 text-[#F4F6F3] hover:bg-white/10"
-                            >
-                              <FaStar className="size-3.5" />
-                              Guardar
-                            </Button>
-                          </div>
+          {/* Right Column: Device Laptop Preview + Floating Infiltrados Card matching Image 2 */}
+          <div className="relative flex items-center justify-center lg:justify-end">
+            {/* Monitor / Display Frame */}
+            <div className="relative w-full max-w-[560px] aspect-[16/10] rounded-2xl sm:rounded-3xl border border-white/15 bg-[#0A0505] shadow-[0_30px_100px_rgba(0,0,0,0.85)] p-2 sm:p-3 overflow-hidden backdrop-blur-2xl ring-1 ring-white/10">
+              {/* Laptop Screen Bezel Header / Camera dot */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 size-1.5 rounded-full bg-white/20" />
+
+              {/* Screen Interior (Mini Dashboard View) */}
+              <div className="h-full w-full rounded-xl sm:rounded-2xl border border-white/5 bg-[#050000] overflow-hidden grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr]">
+                {/* Mini Left Sidebar */}
+                <div className="border-r border-white/5 bg-[#0A0505] p-2 sm:p-3 space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <Image
+                      src="/doyess-logo.svg"
+                      alt=""
+                      width={16}
+                      height={16}
+                    />
+                    <span className="text-[10px] font-bold text-[#F4F6F3] hidden sm:inline">
+                      Doyess
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 text-[9px] text-[#F4F6F3]/60">
+                    <div className="rounded-md bg-[#8A0201] p-1.5 text-white font-semibold">
+                      Inicio
+                    </div>
+                    <div className="p-1.5 hover:text-white">Funciona</div>
+                    <div className="p-1.5 hover:text-white">Características</div>
+                    <div className="p-1.5 hover:text-white">Géneros</div>
+                  </div>
+                </div>
+
+                {/* Mini Dashboard Content */}
+                <div className="p-2 sm:p-4 space-y-3 overflow-hidden">
+                  <h3 className="text-xs sm:text-sm font-bold text-[#F4F6F3]">
+                    Dashboard de Cinéfilo
+                  </h3>
+
+                  {/* 3 Metrics */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-lg border border-white/5 bg-[#101009] p-1.5 sm:p-2">
+                      <p className="text-xs sm:text-sm font-black text-[#F4F6F3]">256</p>
+                      <p className="text-[8px] text-[#F4F6F3]/50">películas</p>
+                    </div>
+                    <div className="rounded-lg border border-white/5 bg-[#101009] p-1.5 sm:p-2">
+                      <p className="text-xs sm:text-sm font-black text-[#F4F6F3]">7.8</p>
+                      <p className="text-[8px] text-[#F4F6F3]/50">Calificación prom.</p>
+                    </div>
+                    <div className="rounded-lg border border-white/5 bg-[#101009] p-1.5 sm:p-2">
+                      <p className="text-xs sm:text-sm font-black text-[#F4F6F3]">1,317 m</p>
+                      <p className="text-[8px] text-[#F4F6F3]/50">Películas</p>
+                    </div>
+                  </div>
+
+                  {/* Red Wave Chart & Genres */}
+                  <div className="grid grid-cols-[1.3fr_0.7fr] gap-2">
+                    <div className="rounded-lg border border-white/5 bg-[#101009] p-2">
+                      <p className="text-[9px] text-[#F4F6F3]/60 font-semibold mb-1">
+                        Géneros Favoritos
+                      </p>
+                      {/* SVG Red Area Wave */}
+                      <svg viewBox="0 0 100 40" className="w-full h-8">
+                        <defs>
+                          <linearGradient id="landing-wave" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#8A0201" stopOpacity="0.8" />
+                            <stop offset="100%" stopColor="#8A0201" stopOpacity="0.1" />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          d="M0,35 Q20,10 40,30 T70,15 T100,25 L100,40 L0,40 Z"
+                          fill="url(#landing-wave)"
+                        />
+                        <path
+                          d="M0,35 Q20,10 40,30 T70,15 T100,25"
+                          fill="none"
+                          stroke="#C80000"
+                          strokeWidth="2"
+                        />
+                      </svg>
+                      <div className="flex justify-between text-[7px] text-[#F4F6F3]/40 mt-1">
+                        <span>Drama</span>
+                        <span>Crimen</span>
+                        <span>Suspense</span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-white/5 bg-[#101009] p-2 space-y-1.5">
+                      <p className="text-[9px] text-[#F4F6F3]/60 font-semibold">
+                        Géneros
+                      </p>
+                      <div className="space-y-1 text-[8px] text-[#F4F6F3]/70">
+                        <div className="flex justify-between items-center">
+                          <span>Drama</span>
+                          <span className="h-1 w-6 rounded bg-[#8A0201]" />
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Crimen</span>
+                          <span className="h-1 w-4 rounded bg-[#8A0201]/70" />
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Suspenso</span>
+                          <span className="h-1 w-3 rounded bg-[#8A0201]/50" />
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
 
-                <div className="space-y-4">
-                  <Card className="border-[#8A0201]/20 bg-black/25 shadow-[0_16px_40px_rgba(0,0,0,0.28)]">
-                    <CardContent className="p-4">
-                      <div className="grid grid-cols-3 gap-3">
-                        {[
-                          { label: 'Películas', value: '256' },
-                          { label: 'Calificación promedio', value: '7.8' },
-                          { label: 'Afinidad', value: '94%' },
-                        ].map((stat) => (
-                          <div
-                            key={stat.label}
-                            className="rounded-2xl border border-white/8 bg-black/20 p-3"
-                          >
-                            <p className="text-[10px] uppercase tracking-[0.24em] text-[#F4F6F3]/55">
-                              {stat.label}
-                            </p>
-                            <p className="mt-2 text-2xl font-black text-[#F4F6F3]">
-                              {stat.value}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-[#8A0201]/20 bg-black/25 shadow-[0_16px_40px_rgba(0,0,0,0.28)]">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm uppercase tracking-[0.24em] text-[#F4F6F3]/55">
-                        Géneros favoritos
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {[
-                        ['Drama', 'w-[92%]'],
-                        ['Crimen', 'w-[76%]'],
-                        ['Suspenso', 'w-[64%]'],
-                      ].map(([label, width]) => (
-                        <div key={label} className="space-y-2">
-                          <div className="flex items-center justify-between text-sm text-[#F4F6F3]/72">
-                            <span>{label}</span>
-                            <span>Top</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-white/10">
-                            <div
-                              className={`h-full rounded-full bg-linear-to-r from-[#8A0201] to-[#d11c1c] ${width}`}
-                            />
-                          </div>
+                  {/* FYP Bottom Grid */}
+                  <div>
+                    <p className="text-[9px] text-[#F4F6F3]/60 font-semibold mb-1">FYP</p>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {['Infiltrados', 'Origen', 'Dune', 'Zodiac'].map((name, i) => (
+                        <div
+                          key={name}
+                          className="aspect-2/3 rounded-md bg-zinc-900 border border-white/5 overflow-hidden relative"
+                        >
+                          <Image
+                            src={
+                              i === 0
+                                ? 'https://image.tmdb.org/t/p/w185/nT97ifVT2J1yMQmeq20Qblg61T.jpg'
+                                : i === 1
+                                ? 'https://image.tmdb.org/t/p/w185/xlaY2zyzMfkhk0HSC5VUwzoZPU1.jpg'
+                                : i === 2
+                                ? 'https://image.tmdb.org/t/p/w185/6izwz7rsy95ARzTR3poZ8H6c5pp.jpg'
+                                : 'https://image.tmdb.org/t/p/w185/74xTEgt7R36Fpooo50r9T25onhq.jpg'
+                            }
+                            alt=""
+                            fill
+                            className="object-cover opacity-80"
+                          />
                         </div>
                       ))}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                  <Card className="border-[#8A0201]/20 bg-black/25 shadow-[0_16px_40px_rgba(0,0,0,0.28)]">
-                    <CardContent className="grid grid-cols-4 gap-2 p-3">
-                      {(featuredMoviesQuery.isLoading
-                        ? Array.from({ length: 4 }).map((_, index) => ({
-                            label: `placeholder-${index}`,
-                            accent: 'Cargando',
-                            movie: null,
-                          }))
-                        : featuredMovies
-                      )
-                        .slice(0, 4)
-                        .map((item) => (
-                          <div
-                            key={item.label}
-                            className="overflow-hidden rounded-2xl border border-white/8 bg-black/30"
-                          >
-                            <div className="relative aspect-2/3">
-                              <Image
-                                src={getTmdbPosterUrl(
-                                  item.movie?.poster_path,
-                                  'w342',
-                                )}
-                                alt={item.label}
-                                fill
-                                sizes="120px"
-                                className="object-cover"
-                              />
-                              <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.85))] p-2">
-                                <p className="text-[10px] uppercase tracking-[0.22em] text-[#F4F6F3]/60">
-                                  {item.accent}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </CardContent>
-                  </Card>
+            {/* Floating Popout Card: INFILTRADOS matching Image 2 */}
+            <div className="absolute -left-4 sm:-left-8 bottom-4 sm:bottom-8 w-44 sm:w-56 overflow-hidden rounded-2xl border-2 border-[#8A0201]/60 bg-[#140808] shadow-[0_20px_50px_rgba(138,2,1,0.5)] z-20 transition-transform duration-300 hover:scale-105">
+              {/* Infiltrados Poster */}
+              <div className="relative aspect-3/4 w-full overflow-hidden bg-black">
+                <Image
+                  src="https://image.tmdb.org/t/p/w500/nT97ifVT2J1yMQmeq20Qblg61T.jpg"
+                  alt="Infiltrados"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-[#140808] via-transparent to-transparent" />
+              </div>
+
+              {/* Card Meta & Buttons matching Mockup */}
+              <div className="p-3 space-y-2">
+                <div>
+                  <h4 className="text-sm font-black text-[#F4F6F3]">Infiltrados</h4>
+                  <p className="text-[11px] font-semibold text-[#8A0201]">
+                    Afinidad: 94%
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#8A0201] py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-[#a30302]"
+                  >
+                    <Heart className="size-3 fill-white" />
+                    <span>Me gusta</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="flex size-7 items-center justify-center rounded-lg border border-white/10 bg-black/40 text-amber-400 hover:bg-black/60"
+                  >
+                    <Star className="size-3 fill-amber-400" />
+                  </button>
+
+                  <button
+                    type="button"
+                    className="flex size-7 items-center justify-center rounded-lg border border-white/10 bg-black/40 text-white/80 hover:bg-black/60"
+                  >
+                    <Bookmark className="size-3" />
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </section>
       </div>
+
+      {/* Google OAuth & Demo Helper Dialog */}
+      <Dialog open={showAuthInfo} onOpenChange={setShowAuthInfo}>
+        <DialogContent className="border border-[#8A0201]/40 bg-[#0A0505] text-[#F4F6F3] shadow-2xl backdrop-blur-2xl sm:max-w-md">
+          <DialogHeader className="space-y-2">
+            <div className="flex items-center gap-2 text-[#8A0201]">
+              <Image src="/doyess-logo.svg" alt="" width={24} height={24} />
+              <Badge className="border border-[#8A0201]/40 bg-[#8A0201]/20 text-[#F4F6F3]">
+                Acceso a Doyess Film
+              </Badge>
+            </div>
+            <DialogTitle className="text-xl font-bold text-[#F4F6F3]">
+              Iniciar Sesión en Doyess Film
+            </DialogTitle>
+            <DialogDescription className="text-xs leading-5 text-[#F4F6F3]/70">
+              Para usar Google OAuth, el proveedor de Google debe estar habilitado en la consola de Supabase. Mientras tanto, puedes acceder directamente al Dashboard con tu perfil cinematográfico y cargar tu archivo CSV de IMDb.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-3">
+            <Link
+              href="/dashboard?demo=true"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#8A0201] py-3 text-sm font-bold text-white shadow-[0_4px_20px_rgba(138,2,1,0.4)] transition hover:bg-[#a30302]"
+            >
+              <Sparkles className="size-4" />
+              <span>Continuar como Dylan Araica (Dashboard Completo)</span>
+            </Link>
+
+            <Link
+              href="/auth/login"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-xs font-semibold text-[#F4F6F3] hover:bg-white/10"
+            >
+              <FaGoogle className="size-3.5" />
+              <span>Probar Google OAuth vía Supabase (/auth/login)</span>
+            </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

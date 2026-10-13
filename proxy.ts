@@ -15,7 +15,18 @@ export async function proxy(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 
-  if (isProtectedRoute && !user) {
+  const isDemo =
+    request.cookies.get('doyess_demo_session')?.value === 'true' ||
+    request.nextUrl.searchParams.get('demo') === 'true';
+
+  if (request.nextUrl.searchParams.get('demo') === 'true') {
+    response.cookies.set('doyess_demo_session', 'true', {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+    });
+  }
+
+  if (isProtectedRoute && !user && !isDemo) {
     const loginUrl = new URL('/', request.url);
     loginUrl.searchParams.set('from', pathname);
 
