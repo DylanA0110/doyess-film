@@ -238,12 +238,31 @@
   width: 100%;
 }
 
+[data-daily-parent] {
+  perspective: 1100px;
+  -webkit-perspective: 1100px;
+  transform-style: preserve-3d;
+}
+
 [data-daily-card] {
   border: 1px solid rgba(244, 246, 243, 0.1);
   border-radius: 0.75rem;
   overflow: hidden;
   background: #141414;
   box-shadow: rgba(0, 0, 0, 0.35) 0 16px 32px -16px;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transition:
+    transform 0.55s ease-in-out,
+    box-shadow 0.45s ease;
+}
+
+@media (hover: hover) {
+  [data-daily-parent]:hover [data-daily-card],
+  [data-daily-parent]:focus-within [data-daily-card] {
+    transform: rotate3d(0.45, 1, 0, 14deg) translateY(-2px);
+    box-shadow: rgba(0, 0, 0, 0.5) 0 22px 40px -18px;
+  }
 }
 
 [data-daily-top] {

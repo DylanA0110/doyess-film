@@ -14,6 +14,7 @@ import {
   getDisplayNameFromUser,
 } from '@/lib/auth/user-profile';
 import { buildProfileHighlights } from '@/lib/dashboard/profile-highlights';
+import { resolveDailyPick } from '@/lib/dashboard/resolve-daily-pick';
 import { loadCinephileStatsRows } from '@/lib/supabase/load-cinephile-stats';
 
 export const instant = false;
@@ -35,6 +36,7 @@ export default async function DashboardPage() {
         recentActivity={[]}
         catalogMovies={[]}
         profileHighlights={[]}
+        dailyPick={null}
       />
     );
   }
@@ -74,6 +76,9 @@ export default async function DashboardPage() {
   const recentMovies = catalogMovies.slice(0, 5);
   const recentActivity = catalogMovies.slice(0, 4);
   const profileHighlights = buildProfileHighlights(rows, stats);
+  const dailyPick = hasData
+    ? await resolveDailyPick(supabase, user.id, rows, stats)
+    : null;
 
   return (
     <DashboardView
@@ -87,6 +92,7 @@ export default async function DashboardPage() {
       recentActivity={recentActivity}
       catalogMovies={catalogMovies}
       profileHighlights={profileHighlights}
+      dailyPick={dailyPick}
       schemaWarning={schemaWarning}
     />
   );

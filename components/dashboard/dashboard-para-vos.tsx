@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { DashboardStats, ProfileHighlight } from '@/components/dashboard/types';
+import type { DailyPickResult, DashboardStats, ProfileHighlight } from '@/components/dashboard/types';
 import { DashboardHighlightFlips } from '@/components/dashboard/dashboard-highlight-flips';
 import {
   KpiDetailDialog,
@@ -14,6 +14,7 @@ type DashboardParaVosProps = {
   stats: DashboardStats;
   highlights: ProfileHighlight[];
   hasData: boolean;
+  dailyPick: DailyPickResult | null;
 };
 
 export function DashboardParaVos({
@@ -22,6 +23,7 @@ export function DashboardParaVos({
   stats,
   highlights,
   hasData,
+  dailyPick,
 }: DashboardParaVosProps) {
   const [kpiOpen, setKpiOpen] = React.useState(false);
   const [kpiKind, setKpiKind] = React.useState<KpiDetailKind | null>(null);
@@ -52,6 +54,7 @@ export function DashboardParaVos({
       <DashboardHighlightFlips
         highlights={highlights}
         hasData={hasData}
+        dailyPick={dailyPick}
         userId={userId}
         onOpenGenreDetail={() => openKpi('genre')}
       />

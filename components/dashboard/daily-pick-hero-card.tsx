@@ -46,7 +46,8 @@ export function DailyPickHeroCard({ pick, userId }: DailyPickHeroCardProps) {
         className="flex justify-center sm:justify-start"
       >
         <div data-daily-shell>
-          <article data-daily-card aria-label={`Película del día: ${movie.title}`}>
+          <div data-daily-parent tabIndex={0}>
+            <article data-daily-card aria-label={`Película del día: ${movie.title}`}>
             <div data-daily-top>
               <div data-daily-poster-wrap>
                 {poster ? (
@@ -75,7 +76,8 @@ export function DailyPickHeroCard({ pick, userId }: DailyPickHeroCardProps) {
                 Ver ficha completa
               </Link>
             </div>
-          </article>
+            </article>
+          </div>
         </div>
       </div>
     </section>

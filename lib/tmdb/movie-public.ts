@@ -45,6 +45,7 @@ export async function fetchMovieRecommendations(
   page = 1,
 ): Promise<TmdbMovieListItem[]> {
   const url = new URL(`${TMDB_BASE}/movie/${tmdbId}/recommendations`);
+  url.searchParams.set('language', 'es-MX');
   url.searchParams.set('page', String(page));
 
   const response = await fetch(url, { headers: authHeaders(), next: { revalidate: 3600 } });
@@ -62,6 +63,7 @@ export async function discoverMoviesForTaste(
 ): Promise<TmdbMovieListItem[]> {
   const genreId = tmdbGenreIdFromImdbLabel(genreName) ?? 18;
   const url = new URL(`${TMDB_BASE}/discover/movie`);
+  url.searchParams.set('language', 'es-MX');
   url.searchParams.set('with_genres', String(genreId));
   url.searchParams.set('primary_release_date.gte', `${yearMin}-01-01`);
   url.searchParams.set('primary_release_date.lte', `${yearMax}-12-31`);

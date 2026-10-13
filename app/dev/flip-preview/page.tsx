@@ -46,7 +46,8 @@ const MOCK_DAILY: DailyPickResult = {
     posterUrl: 'https://image.tmdb.org/t/p/w342/6yoghtyTpDpf4XzxXp9kPDrzila.jpg',
   },
   reason: 'Género drama y nota alta en tu historial',
-  synopsis: 'Dos detectives persiguen a un asesino que usa los siete pecados capitales como modus.',
+  synopsis:
+    'Dos detectives persiguen a un asesino en serie que usa los siete pecados capitales como modus operandi.',
   dayLabel: { month: 'OCT', day: '13' },
   unwatched: true,
 };
@@ -64,6 +65,7 @@ export default function FlipPreviewPage() {
         <DashboardHighlightFlips
           highlights={MOCK_HIGHLIGHTS}
           hasData={false}
+          dailyPick={null}
           userId="preview-user"
         />
       </div>

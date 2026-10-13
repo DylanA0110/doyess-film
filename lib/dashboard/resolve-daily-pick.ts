@@ -2,23 +2,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CinephileStatsRow } from '@/lib/imdb/build-dashboard-stats';
 import type { DashboardStats, DailyPickResult } from '@/components/dashboard/types';
 import { buildDailyPickTasteProfile } from '@/lib/dashboard/daily-pick-taste';
+import {
+  backfillDailyPickLocale,
+  getCachedDailyPickResult,
+  loadStoredDailyPick,
+  storedToResult,
+} from '@/lib/dashboard/daily-pick-cache';
+import { dailyPickDateKey } from '@/lib/dashboard/daily-pick-format';
 import { discoverUnwatchedMovie } from '@/lib/tmdb/discover-unwatched';
-import { resolvePosterUrl } from '@/lib/imdb/poster-url';
-
-const MONTHS_ES = [
-  'ENE',
-  'FEB',
-  'MAR',
-  'ABR',
-  'MAY',
-  'JUN',
-  'JUL',
-  'AGO',
-  'SEP',
-  'OCT',
-  'NOV',
-  'DIC',
-] as const;
+import { fetchMovieDetail } from '@/lib/tmdb/movie-public';
 
 function hashSeed(input: string): number {
   let h = 2166136261;
@@ -29,69 +21,10 @@ function hashSeed(input: string): number {
   return h >>> 0;
 }
 
-function pickDateKey(now: Date): string {
-  return now.toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
-}
-
-function dayLabel(now: Date) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Mexico_City',
-    month: 'numeric',
-    day: 'numeric',
-  }).formatToParts(now);
-  const monthNum = Number(parts.find((p) => p.type === 'month')?.value ?? '1');
-  const day = parts.find((p) => p.type === 'day')?.value ?? '1';
-  const monthIndex = Math.min(12, Math.max(1, monthNum)) - 1;
-  return {
-    month: MONTHS_ES[monthIndex] ?? 'HOY',
-    day,
-  };
-}
-
-function truncate(text: string, max: number): string {
-  const t = text.replace(/\s+/g, ' ').trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, max - 1).trimEnd()}…`;
-}
-
-type StoredPick = {
-  tmdb_id: number;
-  imdb_id: string | null;
-  title: string;
-  release_year: number | null;
-  poster_path: string | null;
-  overview: string | null;
-  reason: string;
-};
-
-function toResult(
-  row: StoredPick,
-  now: Date,
-  extras?: { tmdbVoteAverage?: number },
-): DailyPickResult {
-  return {
-    tmdbId: row.tmdb_id,
-    tmdbVoteAverage: extras?.tmdbVoteAverage,
-    movie: {
-      id: `daily-${row.tmdb_id}`,
-      title: row.title,
-      year: row.release_year ?? undefined,
-      titleKind: 'movie',
-      genres: [],
-      posterUrl: resolvePosterUrl(row.poster_path),
-      overview: row.overview ?? undefined,
-    },
-    reason: row.reason,
-    synopsis: truncate(
-      row.overview?.trim() ||
-        `${row.title}: sugerencia para hoy según tu gusto por el cine que ya calificas.`,
-      240,
-    ),
-    dayLabel: dayLabel(now),
-    unwatched: true,
-  };
-}
-
+/**
+ * Lee caché en Supabase; si no hay fila para hoy, genera una vez (TMDB) y persiste.
+ * Visitas siguientes del mismo día: solo SELECT — escala con N usuarios × 1 lectura/día.
+ */
 export async function resolveDailyPick(
   supabase: SupabaseClient,
   userId: string,
@@ -101,17 +34,12 @@ export async function resolveDailyPick(
 ): Promise<DailyPickResult | null> {
   if (rows.length === 0 || stats.dominantGenreName === '—') return null;
 
-  const pickDate = pickDateKey(now);
-
-  const { data: cached } = await supabase
-    .from('user_daily_picks')
-    .select('tmdb_id, imdb_id, title, release_year, poster_path, overview, reason')
-    .eq('user_id', userId)
-    .eq('pick_date', pickDate)
-    .maybeSingle();
+  const pickDate = dailyPickDateKey(now);
+  let cached = await loadStoredDailyPick(supabase, userId, pickDate);
 
   if (cached) {
-    return toResult(cached as StoredPick, now);
+    cached = await backfillDailyPickLocale(supabase, userId, pickDate, cached);
+    return storedToResult(cached, now);
   }
 
   const excluded = new Set<string>();
@@ -125,67 +53,66 @@ export async function resolveDailyPick(
 
   const taste = buildDailyPickTasteProfile(rows, stats);
   const seed = hashSeed(`${userId}:${pickDate}`);
-  let discovered: Awaited<ReturnType<typeof discoverUnwatchedMovie>> = null;
 
+  let discovered: Awaited<ReturnType<typeof discoverUnwatchedMovie>> = null;
   try {
     discovered = await discoverUnwatchedMovie(taste, excluded, seed);
   } catch {
     discovered = null;
   }
 
-  if (!discovered) {
-    return null;
-  }
+  if (!discovered) return null;
 
+  const detail = await fetchMovieDetail(discovered.tmdbId);
+  const title = detail?.title?.trim() || discovered.title;
+  const overview =
+    detail?.overview?.trim() || discovered.overview?.trim() || '';
   const reason = discovered.matchReason;
+  const voteAverage = detail?.vote_average ?? discovered.voteAverage;
 
   const insertRow = {
     user_id: userId,
     pick_date: pickDate,
     tmdb_id: discovered.tmdbId,
-    imdb_id: discovered.imdbId,
-    title: discovered.title,
+    imdb_id: detail?.imdb_id ?? discovered.imdbId,
+    title,
     release_year: discovered.releaseYear,
-    poster_path: discovered.posterPath,
-    overview: discovered.overview,
+    poster_path: detail?.poster_path ?? discovered.posterPath,
+    overview,
     reason,
+    vote_average: voteAverage,
   };
 
   const { error } = await supabase.from('user_daily_picks').insert(insertRow);
   if (error) {
-    const { data: retry } = await supabase
-      .from('user_daily_picks')
-      .select('tmdb_id, imdb_id, title, release_year, poster_path, overview, reason')
-      .eq('user_id', userId)
-      .eq('pick_date', pickDate)
-      .maybeSingle();
-    if (retry) return toResult(retry as StoredPick, now);
-    return toResult(
+    const retry = await getCachedDailyPickResult(supabase, userId, now);
+    if (retry) return retry;
+    return storedToResult(
       {
         tmdb_id: discovered.tmdbId,
-        imdb_id: discovered.imdbId,
-        title: discovered.title,
+        imdb_id: insertRow.imdb_id,
+        title,
         release_year: discovered.releaseYear,
-        poster_path: discovered.posterPath,
-        overview: discovered.overview,
+        poster_path: insertRow.poster_path,
+        overview,
         reason,
+        vote_average: voteAverage,
       },
       now,
-      { tmdbVoteAverage: discovered.voteAverage },
     );
   }
 
-  return toResult(
+  return storedToResult(
     {
       tmdb_id: discovered.tmdbId,
-      imdb_id: discovered.imdbId,
-      title: discovered.title,
+      imdb_id: insertRow.imdb_id,
+      title,
       release_year: discovered.releaseYear,
-      poster_path: discovered.posterPath,
-      overview: discovered.overview,
+      poster_path: insertRow.poster_path,
+      overview,
       reason,
+      vote_average: voteAverage,
     },
     now,
-    { tmdbVoteAverage: discovered.voteAverage },
   );
 }

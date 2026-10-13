@@ -7,7 +7,7 @@ import { CsvImporterDialog } from './csv-importer-dialog';
 import { DashboardEmptyState } from './dashboard-empty-state';
 import { DashboardParaVos } from './dashboard-para-vos';
 import { DashboardResumenWithData } from './dashboard-resumen-with-data';
-import type { DashboardStats, DashboardMovie, ProfileHighlight } from './types';
+import type { DailyPickResult, DashboardStats, DashboardMovie, ProfileHighlight } from './types';
 
 const TAB_LABELS: Record<string, string> = {
   resumen: 'Resumen',
@@ -31,6 +31,7 @@ interface DashboardViewProps {
   recentActivity: DashboardMovie[];
   catalogMovies: DashboardMovie[];
   profileHighlights: ProfileHighlight[];
+  dailyPick: DailyPickResult | null;
   schemaWarning?: string | null;
 }
 
@@ -44,6 +45,7 @@ export function DashboardView({
   recentMovies,
   catalogMovies,
   profileHighlights,
+  dailyPick,
   schemaWarning,
 }: DashboardViewProps) {
   const [currentTab, setCurrentTab] = React.useState('resumen');
@@ -146,6 +148,7 @@ export function DashboardView({
                 stats={stats}
                 highlights={profileHighlights}
                 hasData={hasData}
+                dailyPick={dailyPick}
               />
             ) : (
               <DashboardEmptyState

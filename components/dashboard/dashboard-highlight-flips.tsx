@@ -1,6 +1,6 @@
 'use client';
 
-import type { ProfileHighlight } from '@/components/dashboard/types';
+import type { DailyPickResult, ProfileHighlight } from '@/components/dashboard/types';
 import { DailyPickSection } from '@/components/dashboard/daily-pick-section';
 import { FlipRevealCard } from '@/components/dashboard/flip-reveal-card';
 
@@ -8,6 +8,7 @@ type DashboardHighlightFlipsProps = {
   highlights: ProfileHighlight[];
   hasData: boolean;
   userId: string;
+  dailyPick: DailyPickResult | null;
   onOpenGenreDetail?: () => void;
 };
 
@@ -15,6 +16,7 @@ export function DashboardHighlightFlips({
   highlights,
   hasData,
   userId,
+  dailyPick,
   onOpenGenreDetail,
 }: DashboardHighlightFlipsProps) {
   const cards = highlights.filter((h) => h.kind !== 'daily');
@@ -29,7 +31,7 @@ export function DashboardHighlightFlips({
 
   return (
     <section aria-label="Tarjetas de revelación" className="space-y-10 sm:space-y-12">
-      <DailyPickSection userId={userId} enabled={hasData} />
+      {hasData ? <DailyPickSection userId={userId} pick={dailyPick} /> : null}
 
       {cards.length > 0 ? (
         <div className="border-t border-white/8 pt-8 sm:pt-10">

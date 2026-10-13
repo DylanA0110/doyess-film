@@ -14,9 +14,13 @@ create table if not exists public.user_daily_picks (
   poster_path text,
   overview text,
   reason text not null,
+  vote_average real,
   created_at timestamptz not null default now(),
   primary key (user_id, pick_date)
 );
+
+alter table public.user_daily_picks
+  add column if not exists vote_average real;
 
 alter table public.user_daily_picks enable row level security;
 
