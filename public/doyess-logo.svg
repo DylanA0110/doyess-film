@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="doyess-red" x1="96" y1="96" x2="416" y2="416" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C80000"/>
+      <stop offset="55%" stop-color="#8A0201"/>
+      <stop offset="100%" stop-color="#5A0000"/>
+    </linearGradient>
+    <linearGradient id="doyess-glow" x1="160" y1="116" x2="360" y2="396" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF8A8A" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#FF8A8A" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="star-cut">
+      <rect width="512" height="512" fill="white"/>
+      <path d="M258 172L275 214L318 231L275 248L258 290L241 248L198 231L241 214L258 172Z" fill="black"/>
+    </mask>
+  </defs>
+
+  <rect width="512" height="512" fill="none"/>
+
+  <g mask="url(#star-cut)">
+    <path d="M147 128C124 128 106 147 106 170V342C106 365 124 384 147 384H156C173 384 186 375 193 360L219 304L182 126C177 121 162 128 147 128Z" fill="url(#doyess-red)"/>
+    <path d="M198 110C181 110 170 125 173 142L204 306L176 366C170 378 179 392 193 392H280C360 392 416 337 416 258C416 179 360 110 280 110H198Z" fill="url(#doyess-red)"/>
+    <path d="M394 190L447 146C453 141 462 145 462 153V359C462 367 453 371 447 366L394 322C388 317 385 309 389 302L414 258L389 214C385 207 388 199 394 190Z" fill="url(#doyess-red)"/>
+    <path d="M130 146L178 332L206 258L178 180C171 160 153 146 130 146Z" fill="url(#glow)" opacity="0.65"/>
+    <ellipse cx="260" cy="256" rx="154" ry="148" fill="url(#doyess-glow)" opacity="0.35"/>
+  </g>
+
+  <path d="M180 143L210 288L238 222L212 168C204 151 194 143 180 143Z" fill="#F4F6F3" fill-opacity="0.08"/>
+</svg>
