@@ -125,7 +125,14 @@ export function LandingPage({ devSkipAuth = false, heroAssets }: LandingPageProp
       <div className="relative z-10 mx-auto w-full max-w-[90rem] px-4 sm:px-6 lg:px-10">
         <header className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:py-6">
           <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <Image src="/doyess-logo.svg" alt="Doyess Film" width={32} height={32} priority />
+            <Image
+              src="/doyess-logo.svg"
+              alt="Doyess Film"
+              width={32}
+              height={32}
+              priority
+              loading="eager"
+            />
             <span className="text-lg font-semibold tracking-tight">Doyess Film</span>
           </Link>
 
