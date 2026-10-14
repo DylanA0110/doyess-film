@@ -17,8 +17,4 @@ export function shouldSkipTmdbWithoutAttempt(titleType: string | null | undefine
   );
 }
 
-export function isTvEpisodeTitleType(titleType: string | null | undefined): boolean {
-  if (!titleType?.trim()) return false;
-  const t = titleType.trim().toLowerCase();
-  return t.includes('episode') || t.includes('episodio') || t === 'tv episode';
-}
+export { isTvEpisodeTitleType } from '@/lib/imdb/title-kind';

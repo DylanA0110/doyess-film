@@ -1,4 +1,4 @@
-export type TitleKind = 'movie' | 'series';
+export type TitleKind = 'movie' | 'series' | 'episode';
 
 export type DashboardMovie = {
   id: string;
@@ -43,6 +43,8 @@ export type TitleKindSlice = {
 export type TitleKindBreakdown = {
   movies: TitleKindSlice;
   series: TitleKindSlice;
+  /** Calificaciones de capítulos (fuera de KPIs de cine por ahora). */
+  episodes: { count: number };
 };
 
 export type DashboardGenreInsight = {
@@ -106,6 +108,15 @@ export type CinephileInsightSummary = {
   evidence: string;
 };
 
+export type DashboardGenreTasteBlock = {
+  dominantName: string;
+  dominantPercent: number;
+  volumeLeader: string;
+  ratingsCount: number;
+  topGenres: Array<{ name: string; percentage: number; count: number; color: string }>;
+  criticPersona: CriticPersonaSummary;
+};
+
 export type DashboardStats = {
   moviesWatched: number;
   moviesWatchedDelta: string;
@@ -147,4 +158,8 @@ export type DashboardStats = {
   criticPersona: CriticPersonaSummary;
   cinephileInsights: CinephileInsightSummary[];
   dominantGenreByFrequency: string;
+  genreTaste: {
+    movies: DashboardGenreTasteBlock | null;
+    series: DashboardGenreTasteBlock | null;
+  };
 };

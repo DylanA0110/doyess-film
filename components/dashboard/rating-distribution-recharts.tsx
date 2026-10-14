@@ -12,6 +12,30 @@ import {
   YAxis,
 } from 'recharts';
 
+function RatingBarTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ value?: number }>;
+  label?: string | number;
+}) {
+  if (!active || !payload?.length) return null;
+  const count = payload[0]?.value ?? 0;
+  return (
+    <div
+      className="rounded-xl border border-white/15 bg-zinc-900 px-3.5 py-2.5 shadow-lg"
+      style={{ color: '#F4F6F3' }}
+    >
+      <p className="text-sm font-semibold text-[#F4F6F3]">Nota {label}</p>
+      <p className="mt-0.5 text-xs text-zinc-300">
+        {count} {count === 1 ? 'título' : 'títulos'}
+      </p>
+    </div>
+  );
+}
+
 type RatingDistributionRechartsProps = {
   distribution: number[];
   onSelectRating?: (rating: number) => void;
@@ -62,14 +86,7 @@ export function RatingDistributionRecharts({
             />
             <Tooltip
               cursor={{ fill: 'rgba(138,2,1,0.12)' }}
-              contentStyle={{
-                background: '#101009',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 12,
-                fontSize: 12,
-              }}
-              labelFormatter={(label) => `Nota ${label}`}
-              formatter={(value) => [`${value} títulos`, 'Cantidad']}
+              content={<RatingBarTooltip />}
             />
             <Bar
               dataKey="count"

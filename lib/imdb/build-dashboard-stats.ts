@@ -1,6 +1,7 @@
 import type {
   DashboardCastInsight,
   DashboardGenreInsight,
+  DashboardGenreTasteBlock,
   DashboardMovie,
   DashboardPersonStat,
   DashboardStats,
@@ -11,17 +12,24 @@ import type { TmdbCastSnapshotEntry, TmdbCrewSnapshotEntry } from '@/lib/tmdb/ty
 import { getTmdbProfileUrl } from '@/lib/tmdb/images';
 import { NEUTRAL_POSTER, resolvePosterUrl } from '@/lib/imdb/poster-url';
 import { personNamesMatch } from '@/lib/imdb/normalize-person-name';
-import { titleKindFromImdbType, type TitleKind } from '@/lib/imdb/title-kind';
+import {
+  rowsForMovieKpis,
+  titleKindFromImdbType,
+  type TitleKind,
+} from '@/lib/imdb/title-kind';
 import {
   INSIGHT_CAST_TOP_N,
   INSIGHT_GENRE_SAMPLES,
 } from '@/lib/dashboard/insight-limits';
 import { actorCompositeScore } from '@/lib/dashboard/highlight-scoring';
+import { genreAffinityExplanation } from '@/lib/recommendation/format-user-copy';
 import {
   buildCinephileInsights,
   genreDisplayPercentages,
+  genreDisplayPercentagesForSlice,
   getUserRecommendationProfile,
 } from '@/lib/recommendation';
+import type { TitleKindTasteSlice } from '@/lib/recommendation/types';
 
 export type CinephileStatsRow = {
   user_id: string;
@@ -182,6 +190,16 @@ function buildRecurringCast(rows: CinephileStatsRow[]): DashboardCastInsight[] {
     }));
 }
 
+function buildTitleKindBreakdown(rows: CinephileStatsRow[]): TitleKindBreakdown {
+  return {
+    movies: buildTitleKindSlice(rows, 'movie'),
+    series: buildTitleKindSlice(rows, 'series'),
+    episodes: {
+      count: rows.filter((r) => titleKindFromImdbType(r.title_type) === 'episode').length,
+    },
+  };
+}
+
 function buildTitleKindSlice(
   rows: CinephileStatsRow[],
   kind: TitleKind,
@@ -219,12 +237,44 @@ function getRatingSummary(rows: CinephileStatsRow[]) {
   };
 }
 
+function mapTasteSliceToBlock(
+  slice: TitleKindTasteSlice,
+  colorOffset: number,
+): DashboardGenreTasteBlock {
+  const display = genreDisplayPercentagesForSlice(slice).slice(0, 5);
+  const topGenres = display.map((g, idx) => ({
+    name: g.name,
+    count: g.count,
+    percentage: g.percentage,
+    color: genreColors[(colorOffset + idx) % genreColors.length],
+  }));
+  const dominantRow = display.find((g) => g.name === slice.dominantByAffinity);
+  return {
+    dominantName: slice.dominantByAffinity,
+    dominantPercent: dominantRow?.percentage ?? topGenres[0]?.percentage ?? 0,
+    volumeLeader: slice.dominantByVolume,
+    ratingsCount: slice.ratingsCount,
+    topGenres,
+    criticPersona: {
+      label: slice.criticPersona.label,
+      detail: slice.criticPersona.detail,
+      globalMean: slice.criticPersona.globalMean,
+      globalStdDev: slice.criticPersona.globalStdDev,
+    },
+  };
+}
+
 function buildGenreInsight(
   rows: CinephileStatsRow[],
   genreName: string,
   percent: number,
+  titleKind?: TitleKind,
 ): DashboardGenreInsight {
-  const withGenre = rows.filter((row) => (row.genres ?? []).includes(genreName));
+  const scoped =
+    titleKind === undefined
+      ? rows
+      : rows.filter((row) => titleKindFromImdbType(row.title_type) === titleKind);
+  const withGenre = scoped.filter((row) => (row.genres ?? []).includes(genreName));
   const samples = withGenre
     .sort((a, b) => b.rating - a.rating || (b.release_year ?? 0) - (a.release_year ?? 0))
     .slice(0, INSIGHT_GENRE_SAMPLES)
@@ -242,10 +292,12 @@ function buildGenreInsight(
     .map((s) => `«${s.title}» (${s.userRating})`)
     .join(', ');
 
-  const explanation =
-    withGenre.length > 0
-      ? `Score Bayesiano ~${percent}% de tu afinidad por género (${withGenre.length} títulos en tu historial). Destacan: ${highlight}.`
-      : `No hay títulos con ${genreName} en tu historial.`;
+  const explanation = genreAffinityExplanation(
+    genreName,
+    percent,
+    withGenre.length,
+    highlight || '—',
+  );
 
   return {
     genre: genreName,
@@ -261,9 +313,12 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     return emptyDashboardStats();
   }
 
+  const movieRows = rowsForMovieKpis(rows);
+  const titleKindBreakdown = buildTitleKindBreakdown(rows);
   const profile = getUserRecommendationProfile(rows);
   if (!profile) {
-    return emptyDashboardStats();
+    const base = emptyDashboardStats();
+    return { ...base, titleKindBreakdown };
   }
 
   let totalRuntimeEstimate = 0;
@@ -274,7 +329,7 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
   let pendingEnrichmentCount = 0;
   let withoutPosterCount = 0;
 
-  rows.forEach((row) => {
+  movieRows.forEach((row) => {
     totalRating += row.rating;
     ratingDistribution[bucketRating(row.rating) - 1] += 1;
 
@@ -286,7 +341,6 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     const status = row.enrichment_status ?? 'pending';
     if (status === 'pending') pendingEnrichmentCount += 1;
     if (!row.poster_path) withoutPosterCount += 1;
-
   });
 
   const avg = Number(profile.globalMean.toFixed(1));
@@ -307,47 +361,40 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
 
   const topDirectors = profile.topDirectors.map((d) => ({
     name: d.name,
-    photoUrl: findCrewPhoto(d.name, rows),
+    photoUrl: findCrewPhoto(d.name, movieRows),
     avgRating: Number(d.avgRating.toFixed(1)),
     movieCount: d.count,
   }));
 
-  const topActors = buildPersonStats(rows, 2);
-  const topActresses = buildPersonStats(rows, 1);
-  const recurringCast = buildRecurringCast(rows);
-  const titleKindBreakdown: TitleKindBreakdown = {
-    movies: buildTitleKindSlice(rows, 'movie'),
-    series: buildTitleKindSlice(rows, 'series'),
-  };
+  const topActors = buildPersonStats(movieRows, 2);
+  const topActresses = buildPersonStats(movieRows, 1);
+  const recurringCast = buildRecurringCast(movieRows);
   const genreInsightsByName: Record<string, DashboardGenreInsight> = {};
   for (const g of topGenres) {
     if (g.name === 'Otros') continue;
-    genreInsightsByName[g.name] = buildGenreInsight(rows, g.name, g.percentage);
+    genreInsightsByName[g.name] = buildGenreInsight(movieRows, g.name, g.percentage, 'movie');
   }
   const dominantGenreInsight =
     dominantGenreName !== '—' ? genreInsightsByName[dominantGenreName] ?? null : null;
 
-  const moviesRated10 = rows
+  const moviesRated10 = movieRows
     .filter((row) => row.rating === 10)
     .sort((a, b) => (b.date_rated ?? '').localeCompare(a.date_rated ?? ''))
     .map(cinephileRowToMovie);
 
   const topDirectorEntry = topDirectors[0];
   const topActorEntry = topActors[0];
-  const topRated = [...rows].sort((a, b) => b.rating - a.rating)[0];
+  const topRated = [...movieRows].sort((a, b) => b.rating - a.rating)[0];
 
-  const globalAvg = 6.5;
-  const vsGlobal = Number((avg - globalAvg).toFixed(1));
-  const vsGlobalLabel = vsGlobal >= 0 ? `+${vsGlobal}` : `${vsGlobal}`;
-  const ratingSummary = getRatingSummary(rows);
+  const ratingSummary = getRatingSummary(movieRows);
 
   return {
-    moviesWatched: rows.length,
+    moviesWatched: movieRows.length,
     moviesWatchedDelta: catalogSinceYear
       ? `desde ${catalogSinceYear}`
-      : `${rows.length} calificados`,
+      : `${movieRows.length} películas`,
     averageRating: avg,
-    averageRatingDelta: `${vsGlobalLabel} vs. media global (${globalAvg})`,
+    averageRatingDelta: profile.criticPersona.label,
     screenTimeMinutes: totalRuntimeEstimate,
     screenTimeString: formatScreenTime(totalRuntimeEstimate),
     screenTimeDelta: 'Desde duración IMDb / TMDB',
@@ -369,7 +416,7 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     },
     growingGenre: {
       name: dominantGenreName,
-      delta: `${dominantGenrePercent}% afinidad Bayesiana`,
+      delta: `${dominantGenrePercent}% de afinidad en tu historial`,
     },
     ratingDistribution,
     dominantGenreName,
@@ -404,6 +451,10 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
       evidence: i.evidence,
     })),
     dominantGenreByFrequency: profile.dominantByFrequency,
+    genreTaste: {
+      movies: profile.moviesTaste ? mapTasteSliceToBlock(profile.moviesTaste, 0) : null,
+      series: null,
+    },
   };
 }
 
@@ -429,6 +480,7 @@ export function emptyDashboardStats(): DashboardStats {
     titleKindBreakdown: {
       movies: { count: 0, avgRating: 0, screenTimeString: '0h' },
       series: { count: 0, avgRating: 0, screenTimeString: '0h' },
+      episodes: { count: 0 },
     },
     recurringCast: [],
     catalogSinceYear: null,
@@ -452,6 +504,7 @@ export function emptyDashboardStats(): DashboardStats {
     },
     cinephileInsights: [],
     dominantGenreByFrequency: '—',
+    genreTaste: { movies: null, series: null },
   };
 }
 

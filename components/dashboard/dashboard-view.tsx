@@ -8,7 +8,12 @@ import { DashboardEmptyState } from './dashboard-empty-state';
 import { DashboardExplorar } from './dashboard-explorar';
 import { DashboardParaVos } from './dashboard-para-vos';
 import { DashboardResumenWithData } from './dashboard-resumen-with-data';
-import type { DailyPickResult, DashboardStats, DashboardMovie, ProfileHighlight } from './types';
+import type {
+  DailyPickResult,
+  DashboardMovie,
+  DashboardStats,
+  ProfileHighlight,
+} from './types';
 
 const TAB_LABELS: Record<string, string> = {
   resumen: 'Resumen',
@@ -33,6 +38,8 @@ interface DashboardViewProps {
   catalogMovies: DashboardMovie[];
   profileHighlights: ProfileHighlight[];
   dailyPick: DailyPickResult | null;
+  ritualDateKey: string;
+  personMovieLookup: Record<string, DashboardMovie[]>;
   schemaWarning?: string | null;
 }
 
@@ -47,6 +54,8 @@ export function DashboardView({
   catalogMovies,
   profileHighlights,
   dailyPick,
+  ritualDateKey,
+  personMovieLookup,
   schemaWarning,
 }: DashboardViewProps) {
   const [currentTab, setCurrentTab] = React.useState('resumen');
@@ -80,8 +89,8 @@ export function DashboardView({
     : 'Sin historial';
 
   return (
-    <div className="flex min-h-screen bg-[#050000] text-[#F4F6F3]">
-      <div className="hidden h-screen shrink-0 lg:block">
+    <div className="min-h-screen bg-[#050000] text-[#F4F6F3] lg:flex lg:items-stretch">
+      <div className="hidden shrink-0 lg:sticky lg:top-0 lg:self-start lg:max-h-screen lg:overflow-hidden lg:block">
         <Sidebar
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
@@ -110,7 +119,7 @@ export function DashboardView({
         />
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+      <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           onOpenImporter={() => setIsImporterOpen(true)}
           onOpenMobileNav={() => setMobileNavOpen(true)}
@@ -133,6 +142,7 @@ export function DashboardView({
                 recentMovies={recentMovies}
                 catalogMovies={catalogMovies}
                 onOpenImporter={() => setIsImporterOpen(true)}
+                personMovieLookup={personMovieLookup}
               />
             ) : (
               <DashboardEmptyState
@@ -150,6 +160,7 @@ export function DashboardView({
                 highlights={profileHighlights}
                 hasData={hasData}
                 dailyPick={dailyPick}
+                ritualDateKey={ritualDateKey}
               />
             ) : (
               <DashboardEmptyState

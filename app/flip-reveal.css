@@ -7,6 +7,11 @@
   overflow: hidden;
 }
 
+.para-vos-masonry-card [data-flip-card] {
+  width: 100% !important;
+  max-width: none;
+}
+
 @media (min-width: 640px) {
   [data-flip-card] {
     width: 12.5rem;
@@ -45,13 +50,6 @@
   transition: transform 0.75s ease-in-out;
 }
 
-@media (hover: hover) {
-  [data-flip-card]:hover [data-flip-inner],
-  [data-flip-card]:focus-within [data-flip-inner] {
-    transform: rotateY(180deg);
-  }
-}
-
 [data-flip-card] [data-flip-inner][data-flipped='true'] {
   transform: rotateY(180deg);
 }
@@ -71,13 +69,85 @@
 [data-flip-face='front'] {
   z-index: 2;
   background-color: #8a0201;
+  background-image:
+    repeating-linear-gradient(
+      -32deg,
+      rgba(244, 246, 243, 0.07) 0 0.65rem,
+      transparent 0.65rem 1.3rem
+    ),
+    radial-gradient(circle at 85% 15%, rgba(244, 246, 243, 0.14), transparent 42%);
   color: #f4f6f3;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  border: 3px solid rgba(5, 0, 0, 0.35);
+  padding: 0.65rem 0.55rem 0.55rem;
+  transform: rotateY(0deg);
+  text-align: center;
+}
+
+[data-flip-front-eyebrow] {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(244, 246, 243, 0.72);
+}
+
+[data-flip-reveal-hint] {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 3px solid #8a0201;
-  padding: 0.5rem;
-  transform: rotateY(0deg);
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+  padding: 0.28rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 246, 243, 0.35);
+  background: rgba(5, 0, 0, 0.22);
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: rgba(244, 246, 243, 0.92);
+}
+
+[data-flip-reveal-hint][data-hint='touch'] {
+  display: inline-flex;
+}
+
+[data-flip-reveal-hint][data-hint='pointer'] {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  [data-flip-reveal-hint][data-hint='touch'] {
+    display: inline-flex;
+  }
+
+  [data-flip-reveal-hint][data-hint='pointer'] {
+    display: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-flip-reveal-hint][data-hint='touch'] {
+    display: none;
+  }
+
+  [data-flip-reveal-hint][data-hint='pointer'] {
+    display: inline-flex;
+  }
+}
+
+[data-flip-back-hint] {
+  margin-top: 0.15rem;
+  font-size: 0.48rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(244, 246, 243, 0.45);
 }
 
 [data-flip-face='back'] {
@@ -95,17 +165,30 @@
 }
 
 [data-flip-front-label] {
-  font-size: 0.72rem;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-align: center;
-  line-height: 1.35;
+  line-height: 1.3;
+  padding-inline: 0.15rem;
+}
+
+.para-vos-masonry-card [data-flip-front-label] {
+  font-size: 0.88rem;
 }
 
 @media (min-width: 640px) {
   [data-flip-front-label] {
-    font-size: 0.8rem;
+    font-size: 0.92rem;
+  }
+
+  .para-vos-masonry-card [data-flip-front-label] {
+    font-size: 1rem;
   }
 }
 
@@ -219,19 +302,16 @@
 }
 
 /* Película del día — tarjeta legible (sin póster sobre el título) */
+/* Solo opacity en el stage: transform aquí rompe perspective 3D del hover en [data-daily-card] */
 [data-daily-stage] {
   margin-bottom: 0.5rem;
   opacity: 0;
-  transform: translateY(0.75rem);
-  transition:
-    opacity 0.55s ease,
-    transform 0.55s ease;
+  transition: opacity 0.55s ease;
   width: min(100%, 26rem);
 }
 
 [data-daily-stage][data-entered='true'] {
   opacity: 1;
-  transform: translateY(0);
 }
 
 [data-daily-shell] {
@@ -239,9 +319,10 @@
 }
 
 [data-daily-parent] {
-  perspective: 1100px;
-  -webkit-perspective: 1100px;
+  perspective: 1200px;
+  -webkit-perspective: 1200px;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 [data-daily-card] {
@@ -257,11 +338,21 @@
     box-shadow 0.45s ease;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   [data-daily-parent]:hover [data-daily-card],
   [data-daily-parent]:focus-within [data-daily-card] {
-    transform: rotate3d(0.45, 1, 0, 14deg) translateY(-2px);
-    box-shadow: rgba(0, 0, 0, 0.5) 0 22px 40px -18px;
+    transform: rotate3d(0.35, 1, 0, 16deg) translateY(-4px) scale(1.01);
+    box-shadow: rgba(0, 0, 0, 0.55) 0 26px 48px -20px;
+  }
+}
+
+[data-daily-stage][data-entered='true'] [data-daily-card] {
+  transform: rotate3d(0.12, 1, 0, 4deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  [data-daily-stage][data-entered='true'] [data-daily-parent]:hover [data-daily-card] {
+    transform: rotate3d(0.35, 1, 0, 16deg) translateY(-4px) scale(1.01);
   }
 }
 

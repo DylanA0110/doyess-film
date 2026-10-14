@@ -6,9 +6,10 @@ import type { DashboardStats } from './types';
 
 interface FavoriteGenresChartProps {
   stats: DashboardStats;
+  onSelectGenre?: (genreName: string) => void;
 }
 
-export function FavoriteGenresChart({ stats }: FavoriteGenresChartProps) {
+export function FavoriteGenresChart({ stats, onSelectGenre }: FavoriteGenresChartProps) {
   const genres = stats.topGenres;
 
   // Compute SVG stroke-dasharray arcs for the donut chart
@@ -73,9 +74,12 @@ export function FavoriteGenresChart({ stats }: FavoriteGenresChartProps) {
         {/* Legend */}
         <div className="flex-1 space-y-2">
           {genres.map((g) => (
-            <div
+            <button
               key={g.name}
-              className="flex items-center justify-between text-xs"
+              type="button"
+              disabled={!onSelectGenre || g.name === 'Otros'}
+              onClick={() => onSelectGenre?.(g.name)}
+              className="flex w-full items-center justify-between rounded-lg text-left text-xs transition enabled:hover:bg-white/5 enabled:cursor-pointer disabled:cursor-default px-1 py-0.5"
             >
               <div className="flex items-center gap-2">
                 <span
@@ -89,7 +93,7 @@ export function FavoriteGenresChart({ stats }: FavoriteGenresChartProps) {
               <span className="font-semibold text-[#F4F6F3]">
                 {g.percentage}%
               </span>
-            </div>
+            </button>
           ))}
         </div>
       </div>

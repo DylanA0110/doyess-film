@@ -26,7 +26,10 @@ function normalizeShowTitle(title: string): string {
 }
 
 function kindLabelForRow(row: CinephileStatsRow): string {
-  return titleKindFromImdbType(row.title_type) === 'series' ? 'Serie' : 'Película';
+  const kind = titleKindFromImdbType(row.title_type);
+  if (kind === 'series') return 'Serie';
+  if (kind === 'episode') return 'Capítulo';
+  return 'Película';
 }
 
 function topGenreSet(stats: DashboardStats): Set<string> {
@@ -217,7 +220,7 @@ export function buildProfileHighlights(
     const blurb =
       insight?.explanation
         ? truncate(insight.explanation.split('.')[0] ?? insight.explanation, 80)
-        : `${stats.dominantGenrePercent}% de tus etiquetas de género.`;
+        : `${stats.dominantGenrePercent}% de afinidad en tu historial.`;
     highlights.push({
       kind: 'genre',
       frontLabel: 'Género favorito',
@@ -230,7 +233,8 @@ export function buildProfileHighlights(
     });
   }
 
-  const tenRow = pickTenRow(rows, stats);
+  const movieRows = rows.filter((r) => titleKindFromImdbType(r.title_type) === 'movie');
+  const tenRow = pickTenRow(movieRows, stats);
   if (tenRow) {
     highlights.push({
       kind: 'ten',
@@ -243,7 +247,6 @@ export function buildProfileHighlights(
     });
   }
 
-  const movieRows = rows.filter((r) => titleKindFromImdbType(r.title_type) === 'movie');
   const favMovie = pickBestRow(movieRows, stats);
   if (favMovie) {
     highlights.push({

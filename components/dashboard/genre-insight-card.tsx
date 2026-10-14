@@ -14,12 +14,6 @@ export function GenreInsightCard({ insight }: GenreInsightCardProps) {
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8A0201]">
         Por qué domina {insight.genre}
       </p>
-      <p className="mt-3 text-sm leading-relaxed text-zinc-300">{insight.explanation}</p>
-      <p className="mt-2 text-xs text-zinc-500">
-        {insight.titlesWithGenre} títulos etiquetados · {insight.percent}% de tus etiquetas de
-        género
-      </p>
-
       {insight.sampleTitles.length > 0 ? (
         <div className="mt-5">
           <p className="text-xs font-medium text-zinc-400">Títulos que más pesan en este patrón</p>

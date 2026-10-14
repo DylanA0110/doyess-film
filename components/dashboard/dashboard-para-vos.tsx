@@ -1,8 +1,12 @@
 'use client';
 
+import '@/app/para-vos.css';
+
 import * as React from 'react';
+import { Suspense } from 'react';
 import type { DailyPickResult, DashboardStats, ProfileHighlight } from '@/components/dashboard/types';
-import { DashboardHighlightFlips } from '@/components/dashboard/dashboard-highlight-flips';
+import { DailyPickRevealStage } from '@/components/dashboard/para-vos/daily-pick-reveal-stage';
+import { ParaVosMasonry } from '@/components/dashboard/para-vos/para-vos-masonry';
 import {
   KpiDetailDialog,
   type KpiDetailKind,
@@ -15,6 +19,7 @@ type DashboardParaVosProps = {
   highlights: ProfileHighlight[];
   hasData: boolean;
   dailyPick: DailyPickResult | null;
+  ritualDateKey: string;
 };
 
 export function DashboardParaVos({
@@ -24,6 +29,7 @@ export function DashboardParaVos({
   highlights,
   hasData,
   dailyPick,
+  ritualDateKey,
 }: DashboardParaVosProps) {
   const [kpiOpen, setKpiOpen] = React.useState(false);
   const [kpiKind, setKpiKind] = React.useState<KpiDetailKind | null>(null);
@@ -39,39 +45,39 @@ export function DashboardParaVos({
   };
 
   return (
-    <div className="space-y-8">
-      <header>
+    <div className="relative min-h-[80vh]">
+      <header className="mb-2 text-center sm:text-left">
         <p className="text-xs font-medium text-[#8A0201]">Para vos, {userName}</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#F4F6F3] sm:text-4xl">
-          Selección personal
+          Descubrí tu cine
         </h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-500">
-          Voltea cada carta para revelar tu género y favoritos. La película del día se genera
-          una vez al día y no está en tu historial IMDb.
-        </p>
       </header>
 
-      <DashboardHighlightFlips
-        highlights={highlights}
-        hasData={hasData}
-        dailyPick={dailyPick}
-        userId={userId}
-        onOpenGenreDetail={() => openKpi('genre')}
-      />
+      {hasData ? (
+        <div className="para-vos-daily-block">
+          <Suspense
+            fallback={
+              <p className="py-8 text-center text-sm text-zinc-500">Cargando tu pick…</p>
+            }
+          >
+            <DailyPickRevealStage
+              userId={userId}
+              initialPick={dailyPick}
+              ritualDateKey={ritualDateKey}
+            />
+          </Suspense>
+        </div>
+      ) : (
+        <p className="py-8 text-center text-sm text-zinc-500">
+          Importa tu CSV para desbloquear tu pick diario y tus cartas.
+        </p>
+      )}
 
-      {stats.cinephileInsights.length > 0 ? (
-        <section className="rounded-2xl border border-white/8 bg-[#101009] p-6">
-          <h2 className="text-sm font-semibold text-[#F4F6F3]">Tu analista</h2>
-          <ul className="mt-4 space-y-4">
-            {stats.cinephileInsights.slice(0, 4).map((insight) => (
-              <li key={insight.kind + insight.headline}>
-                <p className="text-sm font-medium text-[#F4F6F3]">{insight.headline}</p>
-                <p className="mt-1 text-xs text-zinc-500">{insight.detail}</p>
-                <p className="mt-1 text-[10px] text-zinc-600">{insight.evidence}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {hasData ? (
+        <ParaVosMasonry
+          highlights={highlights}
+          onOpenGenreDetail={() => openKpi('genre')}
+        />
       ) : null}
 
       <KpiDetailDialog

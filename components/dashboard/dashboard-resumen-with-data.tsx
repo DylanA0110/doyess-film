@@ -24,6 +24,8 @@ import {
 import { MoviePoster } from '@/components/dashboard/movie-poster';
 import { PersonAvatar } from '@/components/dashboard/person-avatar';
 import { RatingBucketDialog } from '@/components/dashboard/rating-bucket-dialog';
+import { MovieListDialog } from '@/components/dashboard/movie-list-dialog';
+import { moviesForPersonName } from '@/lib/dashboard/person-movie-lookup';
 import { cn } from 'cn';
 
 type DashboardResumenWithDataProps = {
@@ -32,6 +34,7 @@ type DashboardResumenWithDataProps = {
   stats: DashboardStats;
   recentMovies: DashboardMovie[];
   catalogMovies: DashboardMovie[];
+  personMovieLookup: Record<string, DashboardMovie[]>;
   onOpenImporter: () => void;
 };
 
@@ -41,8 +44,10 @@ export function DashboardResumenWithData({
   stats,
   recentMovies,
   catalogMovies,
+  personMovieLookup,
   onOpenImporter,
 }: DashboardResumenWithDataProps) {
+  const movieCatalog = catalogMovies.filter((m) => m.titleKind === 'movie' || !m.titleKind);
   useSilentTmdbEnrich(stats.pendingEnrichmentCount);
 
   const [kpiOpen, setKpiOpen] = React.useState(false);
@@ -52,6 +57,19 @@ export function DashboardResumenWithData({
   );
   const [bucketOpen, setBucketOpen] = React.useState(false);
   const [bucketRating, setBucketRating] = React.useState<number | null>(null);
+  const [listOpen, setListOpen] = React.useState(false);
+  const [listTitle, setListTitle] = React.useState('');
+  const [listMovies, setListMovies] = React.useState<DashboardMovie[]>([]);
+
+  const openMovieList = (title: string, movies: DashboardMovie[]) => {
+    setListTitle(title);
+    setListMovies(movies);
+    setListOpen(true);
+  };
+
+  const openPerson = (name: string) => {
+    openMovieList(name, moviesForPersonName(personMovieLookup, name));
+  };
 
   const openRatingBucket = (rating: number) => {
     setBucketRating(rating);
@@ -128,7 +146,7 @@ export function DashboardResumenWithData({
           icon={<TrendingUp className="size-4" />}
           label="Género dominante"
           value={stats.dominantGenreName}
-          sub={`${stats.dominantGenrePercent}% de tus calificaciones`}
+          sub={`${stats.dominantGenrePercent}% en tus películas`}
           valueClassName="text-2xl sm:text-3xl"
           onClick={() => openKpi('genre')}
         />
@@ -188,7 +206,10 @@ export function DashboardResumenWithData({
         </div>
       </div>
 
-      <FavoriteGenresChart stats={stats} />
+      <FavoriteGenresChart
+        stats={stats}
+        onSelectGenre={(name) => openKpi('genre', name)}
+      />
 
       <DashboardPaginatedSection
         title="Directores que más valoras"
@@ -197,22 +218,26 @@ export function DashboardResumenWithData({
         emptyMessage="Importa tu CSV para ver directores."
         gridClassName="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         renderItem={(director) => (
-          <div
+          <button
+            type="button"
             key={director.name}
-            className="flex items-center gap-4 rounded-xl border border-white/8 bg-zinc-900/60 p-4"
+            onClick={() => openPerson(director.name)}
+            className="flex w-full items-center gap-4 rounded-xl border border-white/8 bg-zinc-900/60 p-4 text-left transition hover:border-[#8A0201]/35 hover:bg-zinc-900"
           >
             <div className="relative size-14 shrink-0 overflow-hidden rounded-full">
               <PersonAvatar src={director.photoUrl} alt={director.name} />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[#F4F6F3]">{director.name}</p>
-              <p className="mt-1 flex items-center gap-1 text-sm text-[#8A0201]">
+              <div className="truncate text-sm font-semibold text-[#F4F6F3]">{director.name}</div>
+              <div className="mt-1 flex items-center gap-1 text-sm text-[#8A0201]">
                 <Star className="size-3.5 fill-current" />
                 {director.avgRating.toFixed(1)}
-              </p>
-              <p className="text-xs text-zinc-500">{director.movieCount} títulos</p>
+              </div>
+              <div className="text-xs text-zinc-500">
+                {director.movieCount} películas · toca para ver
+              </div>
             </div>
-          </div>
+          </button>
         )}
       />
 
@@ -223,18 +248,20 @@ export function DashboardResumenWithData({
         emptyMessage="Sincroniza TMDB para ver reparto."
         gridClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
         renderItem={(person) => (
-          <div
+          <button
+            type="button"
             key={`${person.roleLabel}-${person.name}`}
-            className="flex items-center gap-3 rounded-xl border border-white/8 bg-zinc-900/60 p-3"
+            onClick={() => openPerson(person.name)}
+            className="flex w-full items-center gap-3 rounded-xl border border-white/8 bg-zinc-900/60 p-3 text-left transition hover:border-[#8A0201]/35 hover:bg-zinc-900"
           >
             <div className="relative size-11 shrink-0 overflow-hidden rounded-full">
               <PersonAvatar src={person.photoUrl} alt={person.name} />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[#F4F6F3]">{person.name}</p>
-              <p className="text-xs text-zinc-500">{person.count} títulos</p>
+              <div className="truncate text-sm font-medium text-[#F4F6F3]">{person.name}</div>
+              <div className="text-xs text-zinc-500">{person.count} películas</div>
             </div>
-          </div>
+          </button>
         )}
       />
 
@@ -245,18 +272,20 @@ export function DashboardResumenWithData({
         emptyMessage="Aún no tienes ninguna calificación de 10."
         gridClassName="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
         renderItem={(movie) => (
-          <article
+          <button
+            type="button"
             key={movie.id}
-            className="overflow-hidden rounded-xl border border-white/8 bg-zinc-900/50"
+            onClick={() => openMovieList(movie.title, [movie])}
+            className="overflow-hidden rounded-xl border border-white/8 bg-zinc-900/50 text-left transition hover:border-[#8A0201]/35"
           >
             <div className="relative aspect-[2/3]">
               <MoviePoster src={movie.posterUrl} alt={movie.title} sizes="180px" />
             </div>
             <div className="p-2.5">
-              <p className="truncate text-xs font-semibold text-[#F4F6F3]">{movie.title}</p>
-              <p className="text-[10px] text-zinc-500">{movie.year ?? '—'}</p>
+              <div className="truncate text-xs font-semibold text-[#F4F6F3]">{movie.title}</div>
+              <div className="text-[10px] text-zinc-500">{movie.year ?? '—'}</div>
             </div>
-          </article>
+          </button>
         )}
       />
 
@@ -270,15 +299,17 @@ export function DashboardResumenWithData({
         <p className="mt-1 text-sm text-zinc-500">Lo más reciente de tu importación.</p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {latestRatings.map((movie) => (
-            <article
+            <button
+              type="button"
               key={movie.id}
-              className="overflow-hidden rounded-xl border border-white/8 bg-zinc-900/50"
+              onClick={() => openMovieList(movie.title, [movie])}
+              className="overflow-hidden rounded-xl border border-white/8 bg-zinc-900/50 text-left transition hover:border-[#8A0201]/35"
             >
               <div className="relative aspect-[2/3]">
                 <MoviePoster src={movie.posterUrl} alt={movie.title} sizes="25vw" />
               </div>
               <div className="p-3">
-                <p className="truncate text-sm font-semibold text-[#F4F6F3]">{movie.title}</p>
+                <div className="truncate text-sm font-semibold text-[#F4F6F3]">{movie.title}</div>
                 <div className="mt-1 flex items-center justify-between text-xs text-zinc-500">
                   <span>{movie.year ?? '—'}</span>
                   {movie.userRating ? (
@@ -289,7 +320,7 @@ export function DashboardResumenWithData({
                   ) : null}
                 </div>
               </div>
-            </article>
+            </button>
           ))}
         </div>
       </section>
@@ -310,7 +341,15 @@ export function DashboardResumenWithData({
         open={bucketOpen}
         onOpenChange={setBucketOpen}
         rating={bucketRating}
-        movies={catalogMovies}
+        movies={movieCatalog}
+      />
+
+      <MovieListDialog
+        open={listOpen}
+        onOpenChange={setListOpen}
+        title={listTitle}
+        subtitle={`${listMovies.length} en tu historial`}
+        movies={listMovies}
       />
     </div>
   );
@@ -343,16 +382,13 @@ function KpiCard({
           <span className="text-zinc-300">{icon}</span>
           {label}
         </span>
-        {onClick ? (
-          <span className="text-[10px] text-zinc-500" aria-hidden="true">Toca para detalle</span>
-        ) : null}
       </div>
-      <p
+      <div
         className={`mt-3 font-bold tracking-tight text-[#F4F6F3] ${valueClassName ?? 'text-3xl sm:text-4xl'}`}
       >
         {value}
-      </p>
-      <p className="mt-2 text-xs text-zinc-500">{sub}</p>
+      </div>
+      <div className="mt-2 text-xs text-zinc-500">{sub}</div>
     </>
   );
 

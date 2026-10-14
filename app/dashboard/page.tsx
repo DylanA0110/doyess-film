@@ -13,14 +13,18 @@ import {
   getAvatarUrlFromUser,
   getDisplayNameFromUser,
 } from '@/lib/auth/user-profile';
+import { buildPersonMovieLookup } from '@/lib/dashboard/person-movie-lookup';
 import { buildProfileHighlights } from '@/lib/dashboard/profile-highlights';
-import { resolveDailyPick } from '@/lib/dashboard/resolve-daily-pick';
+import { getCachedDailyPickResult } from '@/lib/dashboard/daily-pick-cache';
+import { dailyPickDateKey } from '@/lib/dashboard/daily-pick-format';
 import { loadCinephileStatsRows } from '@/lib/supabase/load-cinephile-stats';
 
 export const instant = false;
 
 export default async function DashboardPage() {
   await connection();
+
+  const ritualDateKey = dailyPickDateKey(new Date());
 
   if (isDevSkipAuth()) {
     const stats = buildDashboardStats([]);
@@ -37,6 +41,8 @@ export default async function DashboardPage() {
         catalogMovies={[]}
         profileHighlights={[]}
         dailyPick={null}
+        ritualDateKey={ritualDateKey}
+        personMovieLookup={{}}
       />
     );
   }
@@ -75,9 +81,10 @@ export default async function DashboardPage() {
   const catalogMovies = cinephileRowsToMovies(rows);
   const recentMovies = catalogMovies.slice(0, 5);
   const recentActivity = catalogMovies.slice(0, 4);
+  const personMovieLookup = buildPersonMovieLookup(rows);
   const profileHighlights = buildProfileHighlights(rows, stats);
   const dailyPick = hasData
-    ? await resolveDailyPick(supabase, user.id, rows, stats)
+    ? await getCachedDailyPickResult(supabase, user.id)
     : null;
 
   return (
@@ -93,6 +100,8 @@ export default async function DashboardPage() {
       catalogMovies={catalogMovies}
       profileHighlights={profileHighlights}
       dailyPick={dailyPick}
+      ritualDateKey={ritualDateKey}
+      personMovieLookup={personMovieLookup}
       schemaWarning={schemaWarning}
     />
   );
