@@ -92,6 +92,20 @@ export type DailyPickResult = {
   unwatched?: boolean;
 };
 
+export type CriticPersonaSummary = {
+  label: string;
+  detail: string;
+  globalMean: number;
+  globalStdDev: number;
+};
+
+export type CinephileInsightSummary = {
+  kind: string;
+  headline: string;
+  detail: string;
+  evidence: string;
+};
+
 export type DashboardStats = {
   moviesWatched: number;
   moviesWatchedDelta: string;
@@ -128,4 +142,9 @@ export type DashboardStats = {
     highPercent: number;
     highCount: number;
   };
+  globalMean: number;
+  globalStdDev: number;
+  criticPersona: CriticPersonaSummary;
+  cinephileInsights: CinephileInsightSummary[];
+  dominantGenreByFrequency: string;
 };

@@ -1,6 +1,7 @@
-import type { DailyPickTasteProfile } from '@/lib/dashboard/daily-pick-taste';
+import { formatRecommendationReason } from '@/lib/recommendation/format-reason';
+import { rankCandidates } from '@/lib/recommendation/rank-candidates';
+import type { CandidateMovie, UserVectorProfile } from '@/lib/recommendation/types';
 import { findTmdbByImdbId } from '@/lib/tmdb/find-by-imdb';
-import { tmdbGenreIdFromImdbLabel } from '@/lib/tmdb/imdb-genre-to-tmdb';
 import {
   discoverMoviesForTaste,
   fetchMovieImdbId,
@@ -25,35 +26,18 @@ function releaseYear(item: TmdbMovieListItem): number | null {
   return Number.isFinite(y) ? y : null;
 }
 
-function scoreCandidate(
-  item: TmdbMovieListItem,
-  profile: DailyPickTasteProfile,
-  genreIdSet: Set<number>,
-): number {
-  let score = item.vote_average * 4;
-  score += Math.min(12, Math.log10(Math.max(item.vote_count, 1)) * 4);
-
-  const year = releaseYear(item);
-  if (year) {
-    const mid = (profile.yearMin + profile.yearMax) / 2;
-    const span = Math.max(8, (profile.yearMax - profile.yearMin) / 2);
-    const dist = Math.abs(year - mid) / span;
-    score += Math.max(0, 14 - dist * 14);
-  }
-
-  const ids = item.genre_ids ?? [];
-  let genreHit = 0;
-  for (const id of ids) {
-    if (genreIdSet.has(id)) genreHit += 1;
-  }
-  score += genreHit * 6;
-
-  for (const name of profile.genreNames) {
-    const gid = tmdbGenreIdFromImdbLabel(name);
-    if (gid && ids.includes(gid)) score += (profile.genreWeights[name] ?? 0.2) * 20;
-  }
-
-  return score;
+function tmdbItemToCandidate(item: TmdbMovieListItem): CandidateMovie {
+  return {
+    tmdbId: item.id,
+    title: item.title,
+    overview: item.overview,
+    posterPath: item.poster_path,
+    releaseYear: releaseYear(item),
+    voteAverage: item.vote_average,
+    voteCount: item.vote_count,
+    genreIds: item.genre_ids ?? [],
+    director: null,
+  };
 }
 
 function dedupeById(items: TmdbMovieListItem[]): TmdbMovieListItem[] {
@@ -79,20 +63,15 @@ export type UnwatchedDiscoverPick = {
 };
 
 export async function discoverUnwatchedMovie(
-  profile: DailyPickTasteProfile,
+  profile: UserVectorProfile,
   excludedImdbIds: Set<string>,
   seed: number,
 ): Promise<UnwatchedDiscoverPick | null> {
-  const genreIdSet = new Set(
-    profile.genreNames
-      .map((n) => tmdbGenreIdFromImdbLabel(n))
-      .filter((id): id is number => id != null),
-  );
-
   const pool: TmdbMovieListItem[] = [];
+  const genreNames = profile.topGenreNames;
 
-  for (let i = 0; i < profile.genreNames.length; i++) {
-    const genre = profile.genreNames[i];
+  for (let i = 0; i < genreNames.length; i++) {
+    const genre = genreNames[i];
     const page = 1 + ((seed + i) % 3);
     const chunk = await discoverMoviesForTaste(
       genre,
@@ -114,36 +93,33 @@ export async function discoverUnwatchedMovie(
   const unique = dedupeById(pool);
   if (unique.length === 0) return null;
 
-  const scored: Array<{ item: TmdbMovieListItem; score: number }> = [];
   const inspectOrder = [...unique].sort((a, b) => b.vote_average - a.vote_average);
+  const candidates: CandidateMovie[] = [];
 
-  for (const candidate of inspectOrder.slice(0, 28)) {
-    const imdbId = await fetchMovieImdbId(candidate.id);
+  for (const item of inspectOrder.slice(0, 28)) {
+    const imdbId = await fetchMovieImdbId(item.id);
     if (isExcluded(imdbId, excludedImdbIds)) continue;
-    const score = scoreCandidate(candidate, profile, genreIdSet);
-    scored.push({ item: candidate, score });
+    candidates.push(tmdbItemToCandidate(item));
   }
 
-  if (scored.length === 0) return null;
+  if (candidates.length === 0) return null;
 
-  scored.sort((a, b) => b.score - a.score);
-  const top = scored.slice(0, 8);
+  const ranked = rankCandidates(profile, candidates);
+  const top = ranked.slice(0, 8);
   const pick = top[seed % top.length];
-  const year = releaseYear(pick.item);
+  const item = pick.candidate;
+  const matchReason = formatRecommendationReason(pick.breakdown, profile);
 
-  const genreLabel = profile.genreNames.slice(0, 2).join(' y ');
-  const matchReason = `Fuera de tu IMDb · afinidad con ${genreLabel} y tu época favorita (${profile.yearMin}–${profile.yearMax})`;
-
-  const imdbId = await fetchMovieImdbId(pick.item.id);
+  const imdbId = await fetchMovieImdbId(item.tmdbId);
 
   return {
-    tmdbId: pick.item.id,
+    tmdbId: item.tmdbId,
     imdbId,
-    title: pick.item.title,
-    overview: pick.item.overview,
-    posterPath: pick.item.poster_path,
-    releaseYear: year,
-    voteAverage: pick.item.vote_average,
+    title: item.title,
+    overview: item.overview,
+    posterPath: item.posterPath,
+    releaseYear: item.releaseYear,
+    voteAverage: item.voteAverage,
     matchReason,
   };
 }

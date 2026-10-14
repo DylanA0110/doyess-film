@@ -115,6 +115,16 @@ export const initialStats: DashboardStats = {
       roleLabel: 'actor',
     },
   ],
+  globalMean: 7.8,
+  globalStdDev: 1.1,
+  criticPersona: {
+    label: 'Equilibrado',
+    detail: 'Promedio 7.8 en tu historial.',
+    globalMean: 7.8,
+    globalStdDev: 1.1,
+  },
+  cinephileInsights: [],
+  dominantGenreByFrequency: 'Drama',
 };
 
 export const featuredRecommendations: DashboardMovie[] = [

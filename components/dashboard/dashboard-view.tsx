@@ -5,6 +5,7 @@ import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { CsvImporterDialog } from './csv-importer-dialog';
 import { DashboardEmptyState } from './dashboard-empty-state';
+import { DashboardExplorar } from './dashboard-explorar';
 import { DashboardParaVos } from './dashboard-para-vos';
 import { DashboardResumenWithData } from './dashboard-resumen-with-data';
 import type { DailyPickResult, DashboardStats, DashboardMovie, ProfileHighlight } from './types';
@@ -150,6 +151,16 @@ export function DashboardView({
                 hasData={hasData}
                 dailyPick={dailyPick}
               />
+            ) : (
+              <DashboardEmptyState
+                userName={userName}
+                userId={userId}
+                schemaWarning={schemaWarning}
+              />
+            )
+          ) : currentTab === 'explorar' ? (
+            hasData ? (
+              <DashboardExplorar userName={userName} stats={stats} />
             ) : (
               <DashboardEmptyState
                 userName={userName}

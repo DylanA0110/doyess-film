@@ -1,54 +1,60 @@
 # Doyess Film
 
-Tu historia cinematográfica: inicio de sesión con Google, dashboard privado y carga opcional del CSV de calificaciones de IMDb.
+Laboratorio personal de cine: importa tu CSV de IMDb, obtén estadísticas con **promedios Bayesianos** y recomendaciones con **similitud del coseno** explicables — en una UI oscura tipo cartelera.
+
+## Stack
+
+- **Next.js** (App Router) · **React** · **TypeScript**
+- **Supabase** (Auth Google, Postgres, RLS)
+- **Tailwind CSS v4** · **Recharts** · **TanStack Query**
+- **TMDB** (enriquecimiento server-side, película del día, Explorar)
+- Motor en [`lib/recommendation/`](lib/recommendation/) — ver [`docs/recommendation-engine.md`](docs/recommendation-engine.md)
 
 ## Requisitos
 
 - Node.js 20+
 - [pnpm](https://pnpm.io/)
-- Proyecto [Supabase](https://supabase.com/) — **proyecto nuevo:** ejecuta [supabase/schema.sql](./supabase/schema.sql) en el SQL Editor. **Ya tienes tablas:** ejecuta [supabase/migrate-tmdb-enrichment.sql](./supabase/migrate-tmdb-enrichment.sql) entero (TMDB + `enrichment_status` + vista `cinephile_stats`).
-- Google OAuth habilitado en Supabase (Authentication → Providers → Google)
-- Variables en `.env.local`:
+- Proyecto [Supabase](https://supabase.com/)
+- Google OAuth en Supabase
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-TMDB_API_TOKEN=   # solo para rutas server TMDB (fases posteriores)
-```
+### SQL (orden)
 
-Redirect URL en Supabase: `http://localhost:3000/auth/callback` (y tu dominio de producción).
+1. Proyecto nuevo: [`supabase/schema.sql`](supabase/schema.sql)
+2. Ya existente: [`supabase/migrate-tmdb-enrichment.sql`](supabase/migrate-tmdb-enrichment.sql), [`supabase/migrate-user-daily-pick.sql`](supabase/migrate-user-daily-pick.sql), opcional [`supabase/migrate-user-taste-profiles.sql`](supabase/migrate-user-taste-profiles.sql)
 
-**OAuth local:** `DEV_SKIP_AUTH=false` y `NEXT_PUBLIC_DEV_SKIP_AUTH=false` en `.env` (reinicia `pnpm dev`). El CTA usa `/auth/login` (servidor + PKCE).
-
-**Error `provider is not enabled`:** activa Google en Supabase. Pasos en [docs/google-oauth-setup.md](./docs/google-oauth-setup.md).
-
-## Desarrollo
+## Local
 
 ```bash
+cp .env.example .env.local
+# Rellena NEXT_PUBLIC_SUPABASE_* y TMDB_API_TOKEN
+
 pnpm install
 pnpm dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000).
+Redirect URL en Supabase: `http://localhost:3000/auth/callback`
 
-## Flujo de usuario
-
-1. **Inicio** — landing pública (assets estáticos, sin TMDB).
-2. **Comenzar con Google** — `/auth/login` → callback → `/dashboard`.
-3. **Dashboard vacío** — normal si no hay CSV importado.
-4. **Opcional** — importar CSV de IMDb (ver tutorial en docs).
-
-## Documentación (orden recomendado)
-
-1. [Sistema de diseño](./docs/doyess-film-design-system.md)
-2. [Referencia home](./docs/home-mockup-reference.md)
-3. [Referencia dashboard](./docs/dashboard-mockup-reference.md)
-4. [Formato CSV IMDb](./docs/imdb-csv-base.md)
-5. [Tutorial exportar IMDb](./docs/imdb-export-tutorial.md)
-6. [Backlog](./docs/BACKLOG.md)
+OAuth: [`docs/google-oauth-setup.md`](docs/google-oauth-setup.md)
 
 ## Scripts
 
-- `pnpm dev` — servidor de desarrollo
-- `pnpm build` — build de producción
-- `pnpm lint` — ESLint
+| Comando | Descripción |
+|---------|-------------|
+| `pnpm dev` | Desarrollo |
+| `pnpm build` | Producción |
+| `pnpm lint` | ESLint |
+| `pnpm test` | Vitest (motor de recomendación) |
+
+## Documentación
+
+1. [Sistema de diseño](docs/doyess-film-design-system.md)
+2. [Motor de recomendación](docs/recommendation-engine.md)
+3. [UVP / posicionamiento](docs/doyess-uvp.md)
+4. [CSV IMDb](docs/imdb-csv-base.md) · [Tutorial export](docs/imdb-export-tutorial.md)
+5. [Contribuir](CONTRIBUTING.md)
+
+## Flujo
+
+1. Landing → login Google → dashboard
+2. Importar CSV IMDb (opcional)
+3. Resumen (KPIs Bayes) · Para vos (cartas + película del día) · Explorar (preview)

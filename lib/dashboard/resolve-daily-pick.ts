@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CinephileStatsRow } from '@/lib/imdb/build-dashboard-stats';
 import type { DashboardStats, DailyPickResult } from '@/components/dashboard/types';
-import { buildDailyPickTasteProfile } from '@/lib/dashboard/daily-pick-taste';
+import { getUserRecommendationProfile } from '@/lib/recommendation';
 import {
   backfillDailyPickLocale,
   getCachedDailyPickResult,
@@ -32,7 +32,7 @@ export async function resolveDailyPick(
   stats: DashboardStats,
   now: Date = new Date(),
 ): Promise<DailyPickResult | null> {
-  if (rows.length === 0 || stats.dominantGenreName === '—') return null;
+  if (rows.length === 0) return null;
 
   const pickDate = dailyPickDateKey(now);
   let cached = await loadStoredDailyPick(supabase, userId, pickDate);
@@ -51,12 +51,14 @@ export async function resolveDailyPick(
     }
   }
 
-  const taste = buildDailyPickTasteProfile(rows, stats);
+  const profile = getUserRecommendationProfile(rows);
+  if (!profile) return null;
+
   const seed = hashSeed(`${userId}:${pickDate}`);
 
   let discovered: Awaited<ReturnType<typeof discoverUnwatchedMovie>> = null;
   try {
-    discovered = await discoverUnwatchedMovie(taste, excluded, seed);
+    discovered = await discoverUnwatchedMovie(profile, excluded, seed);
   } catch {
     discovered = null;
   }

@@ -16,10 +16,12 @@ import {
   INSIGHT_CAST_TOP_N,
   INSIGHT_GENRE_SAMPLES,
 } from '@/lib/dashboard/insight-limits';
+import { actorCompositeScore } from '@/lib/dashboard/highlight-scoring';
 import {
-  actorCompositeScore,
-  directorCompositeScore,
-} from '@/lib/dashboard/highlight-scoring';
+  buildCinephileInsights,
+  genreDisplayPercentages,
+  getUserRecommendationProfile,
+} from '@/lib/recommendation';
 
 export type CinephileStatsRow = {
   user_id: string;
@@ -242,7 +244,7 @@ function buildGenreInsight(
 
   const explanation =
     withGenre.length > 0
-      ? `Aparece en ${withGenre.length} de tus ${rows.length} calificaciones (${percent}% de las etiquetas de género; un título puede tener varios). Destacan: ${highlight}.`
+      ? `Score Bayesiano ~${percent}% de tu afinidad por género (${withGenre.length} títulos en tu historial). Destacan: ${highlight}.`
       : `No hay títulos con ${genreName} en tu historial.`;
 
   return {
@@ -259,10 +261,13 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     return emptyDashboardStats();
   }
 
+  const profile = getUserRecommendationProfile(rows);
+  if (!profile) {
+    return emptyDashboardStats();
+  }
+
   let totalRuntimeEstimate = 0;
   let totalRating = 0;
-  const genreCounts: Record<string, number> = {};
-  const directorAgg: Record<string, { sum: number; count: number }> = {};
   const ratingDistribution = Array.from({ length: 10 }, () => 0);
   const ratedDates: string[] = [];
   const releaseYears: number[] = [];
@@ -282,69 +287,30 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     if (status === 'pending') pendingEnrichmentCount += 1;
     if (!row.poster_path) withoutPosterCount += 1;
 
-    (row.genres ?? []).forEach((g) => {
-      genreCounts[g] = (genreCounts[g] || 0) + 1;
-    });
-    (row.directors ?? []).forEach((d) => {
-      if (!directorAgg[d]) directorAgg[d] = { sum: 0, count: 0 };
-      directorAgg[d].sum += row.rating;
-      directorAgg[d].count += 1;
-    });
   });
 
-  const avg = Number((totalRating / rows.length).toFixed(1));
-  const sortedGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);
-  const topFive = sortedGenres.slice(0, 5);
-  const totalGenreTags = sortedGenres.reduce((acc, [, c]) => acc + c, 0) || 1;
-
-  const topGenres = topFive.map(([name, count], idx) => ({
-    name,
-    count,
-    percentage: Math.round((count / totalGenreTags) * 100),
+  const avg = Number(profile.globalMean.toFixed(1));
+  const bayesDisplay = genreDisplayPercentages(profile);
+  const topFiveBayes = bayesDisplay.slice(0, 5);
+  const topGenres = topFiveBayes.map((g, idx) => ({
+    name: g.name,
+    count: g.count,
+    percentage: g.percentage,
     color: genreColors[idx % genreColors.length],
   }));
 
-  const topFiveSum = topFive.reduce((acc, [, c]) => acc + c, 0);
-  const othersCount = Math.max(0, totalGenreTags - topFiveSum);
-  if (othersCount > 0) {
-    topGenres.push({
-      name: 'Otros',
-      count: othersCount,
-      percentage: Math.round((othersCount / totalGenreTags) * 100),
-      color: '#52525B',
-    });
-  }
-
-  const dominant = sortedGenres[0];
-  const dominantGenreName = dominant?.[0] ?? '—';
-  const dominantGenrePercent = dominant
-    ? Math.round((dominant[1] / totalGenreTags) * 100)
-    : 0;
+  const dominantGenreName = profile.dominantByBayes;
+  const dominantGenrePercent = topGenres[0]?.percentage ?? 0;
 
   const catalogSinceYear =
     releaseYears.length > 0 ? Math.min(...releaseYears) : null;
 
-  const directorEntries = Object.entries(directorAgg).map(([name, { sum, count }]) => {
-    const avgRating = Number((sum / count).toFixed(1));
-    return {
-      name,
-      photoUrl: findCrewPhoto(name, rows),
-      avgRating,
-      movieCount: count,
-      _score: directorCompositeScore(avgRating, count),
-    };
-  });
-  const qualityDirectors = directorEntries.filter(
-    (d) => d.movieCount >= 2 || d.avgRating >= 9,
-  );
-  const topDirectors = (qualityDirectors.length > 0 ? qualityDirectors : directorEntries)
-    .sort((a, b) => b._score - a._score)
-    .map(({ name, photoUrl, avgRating, movieCount }) => ({
-      name,
-      photoUrl,
-      avgRating,
-      movieCount,
-    }));
+  const topDirectors = profile.topDirectors.map((d) => ({
+    name: d.name,
+    photoUrl: findCrewPhoto(d.name, rows),
+    avgRating: Number(d.avgRating.toFixed(1)),
+    movieCount: d.count,
+  }));
 
   const topActors = buildPersonStats(rows, 2);
   const topActresses = buildPersonStats(rows, 1);
@@ -403,7 +369,7 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     },
     growingGenre: {
       name: dominantGenreName,
-      delta: `${dominantGenrePercent}% de tus calificaciones`,
+      delta: `${dominantGenrePercent}% afinidad Bayesiana`,
     },
     ratingDistribution,
     dominantGenreName,
@@ -423,6 +389,21 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     withoutPosterCount,
     unenrichedCount: withoutPosterCount,
     ratingSummary,
+    globalMean: profile.globalMean,
+    globalStdDev: profile.globalStdDev,
+    criticPersona: {
+      label: profile.criticPersona.label,
+      detail: profile.criticPersona.detail,
+      globalMean: profile.criticPersona.globalMean,
+      globalStdDev: profile.criticPersona.globalStdDev,
+    },
+    cinephileInsights: buildCinephileInsights(profile).map((i) => ({
+      kind: i.kind,
+      headline: i.headline,
+      detail: i.detail,
+      evidence: i.evidence,
+    })),
+    dominantGenreByFrequency: profile.dominantByFrequency,
   };
 }
 
@@ -461,6 +442,16 @@ export function emptyDashboardStats(): DashboardStats {
     withoutPosterCount: 0,
     unenrichedCount: 0,
     ratingSummary: { median: 0, highPercent: 0, highCount: 0 },
+    globalMean: 0,
+    globalStdDev: 0,
+    criticPersona: {
+      label: '—',
+      detail: '—',
+      globalMean: 0,
+      globalStdDev: 0,
+    },
+    cinephileInsights: [],
+    dominantGenreByFrequency: '—',
   };
 }
 

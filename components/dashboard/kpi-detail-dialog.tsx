@@ -102,6 +102,12 @@ function RatingBody({
         <span className="font-semibold text-[#F4F6F3]">{median}</span>
       </p>
       <p>{stats.averageRatingDelta}</p>
+      <p className="text-[#F4F6F3]/90">
+        {stats.criticPersona.label}: {stats.criticPersona.detail}
+      </p>
+      <p className="text-xs text-zinc-500">
+        σ = {stats.globalStdDev.toFixed(2)} (consistencia de tus notas)
+      </p>
       <p>
         {highCount} títulos con nota ≥8 ({highPercent}%) · {low} con nota 1–4.
       </p>

@@ -5,10 +5,8 @@ import type { TmdbCastSnapshotEntry } from '@/lib/tmdb/types';
 import { getTmdbProfileUrl } from '@/lib/tmdb/images';
 import { NEUTRAL_POSTER, resolvePosterUrl } from '@/lib/imdb/poster-url';
 import { titleKindFromImdbType } from '@/lib/imdb/title-kind';
-import {
-  actorCompositeScore,
-  directorCompositeScore,
-} from '@/lib/dashboard/highlight-scoring';
+import { actorCompositeScore, directorCompositeScore } from '@/lib/dashboard/highlight-scoring';
+import { getUserRecommendationProfile, titleGenreAffinity } from '@/lib/recommendation';
 
 const BLURB_MAX = 72;
 
@@ -37,20 +35,21 @@ function topGenreSet(stats: DashboardStats): Set<string> {
   );
 }
 
-function affinityScore(row: CinephileStatsRow, stats: DashboardStats): number {
+function affinityScore(
+  row: CinephileStatsRow,
+  stats: DashboardStats,
+  rows: CinephileStatsRow[],
+): number {
+  const profile = getUserRecommendationProfile(rows);
+  if (profile) {
+    const cos = titleGenreAffinity(profile, row.genres ?? []);
+    return cos * 5 + (row.rating / 10) * 3;
+  }
   const top = topGenreSet(stats);
   const genres = row.genres ?? [];
   let score = (row.rating / 10) * 4;
   if (genres.includes(stats.dominantGenreName)) score += 3;
   else if (genres.some((g) => top.has(g))) score += 1.5;
-  if (row.date_rated) {
-    const rated = new Date(row.date_rated).getTime();
-    if (!Number.isNaN(rated)) {
-      const yearsAgo = (Date.now() - rated) / (365.25 * 24 * 3600 * 1000);
-      if (yearsAgo < 1) score += 0.35;
-      else if (yearsAgo < 3) score += 0.15;
-    }
-  }
   return score;
 }
 
@@ -69,7 +68,9 @@ function blurbForRow(row: CinephileStatsRow, stats: DashboardStats): string {
 
 function pickBestRow(rows: CinephileStatsRow[], stats: DashboardStats): CinephileStatsRow | null {
   if (rows.length === 0) return null;
-  return [...rows].sort((a, b) => affinityScore(b, stats) - affinityScore(a, stats))[0];
+  return [...rows].sort(
+    (a, b) => affinityScore(b, stats, rows) - affinityScore(a, stats, rows),
+  )[0];
 }
 
 function groupSeriesRepresentatives(rows: CinephileStatsRow[]): CinephileStatsRow[] {

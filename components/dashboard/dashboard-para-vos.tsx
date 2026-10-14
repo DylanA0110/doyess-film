@@ -59,6 +59,21 @@ export function DashboardParaVos({
         onOpenGenreDetail={() => openKpi('genre')}
       />
 
+      {stats.cinephileInsights.length > 0 ? (
+        <section className="rounded-2xl border border-white/8 bg-[#101009] p-6">
+          <h2 className="text-sm font-semibold text-[#F4F6F3]">Tu analista</h2>
+          <ul className="mt-4 space-y-4">
+            {stats.cinephileInsights.slice(0, 4).map((insight) => (
+              <li key={insight.kind + insight.headline}>
+                <p className="text-sm font-medium text-[#F4F6F3]">{insight.headline}</p>
+                <p className="mt-1 text-xs text-zinc-500">{insight.detail}</p>
+                <p className="mt-1 text-[10px] text-zinc-600">{insight.evidence}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <KpiDetailDialog
         open={kpiOpen}
         onOpenChange={setKpiOpen}
