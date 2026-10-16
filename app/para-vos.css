@@ -643,8 +643,10 @@
 /* Masonry scroll — https://developer.chrome.com/blog/masonry-update */
 @keyframes para-vos-slide-in {
   from {
-    scale: 0.78;
-    rotate: calc((var(--side, 1) * (7deg * var(--amp, 1))));
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -759,13 +761,16 @@
 }
 
 .para-vos-masonry > .card-animation-layer:nth-of-type(2n + 1) {
-  transform-origin: 25vw 100%;
   --side: -1;
 }
 
 .para-vos-masonry > .card-animation-layer:nth-of-type(2n) {
-  transform-origin: -25vw 100%;
   --side: 1;
+}
+
+/* El flip 3D vive en [data-flip-inner]; evitar transform en ancestros (scroll-in). */
+.para-vos-masonry-card [data-flip-btn] {
+  transform: translateZ(0);
 }
 
 @media (width >= 720px) {

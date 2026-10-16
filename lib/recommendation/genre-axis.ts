@@ -31,6 +31,15 @@ for (const entry of GENRE_AXIS) {
 IMDB_LABEL_TO_INDEX.set('science fiction', TMDB_ID_TO_INDEX.get(878)!);
 IMDB_LABEL_TO_INDEX.set('sci-fi', TMDB_ID_TO_INDEX.get(878)!);
 IMDB_LABEL_TO_INDEX.set('musical', TMDB_ID_TO_INDEX.get(10402)!);
+IMDB_LABEL_TO_INDEX.set('suspense', TMDB_ID_TO_INDEX.get(53)!);
+IMDB_LABEL_TO_INDEX.set('misterio', TMDB_ID_TO_INDEX.get(9648)!);
+IMDB_LABEL_TO_INDEX.set('crimen', TMDB_ID_TO_INDEX.get(80)!);
+IMDB_LABEL_TO_INDEX.set('ciencia ficción', TMDB_ID_TO_INDEX.get(878)!);
+IMDB_LABEL_TO_INDEX.set('terror', TMDB_ID_TO_INDEX.get(27)!);
+IMDB_LABEL_TO_INDEX.set('animación', TMDB_ID_TO_INDEX.get(16)!);
+IMDB_LABEL_TO_INDEX.set('fantasía', TMDB_ID_TO_INDEX.get(14)!);
+IMDB_LABEL_TO_INDEX.set('comedia', TMDB_ID_TO_INDEX.get(35)!);
+IMDB_LABEL_TO_INDEX.set('acción', TMDB_ID_TO_INDEX.get(28)!);
 
 export function tmdbGenreIdToAxisIndex(tmdbId: number): number | null {
   const idx = TMDB_ID_TO_INDEX.get(tmdbId);

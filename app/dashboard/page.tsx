@@ -1,5 +1,6 @@
 import { connection } from 'next/server';
 import { redirect } from 'next/navigation';
+import { createSupabaseAdminClient, isSupabaseAdminConfigured } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 import {
@@ -15,9 +16,15 @@ import {
 } from '@/lib/auth/user-profile';
 import { buildPersonMovieLookup } from '@/lib/dashboard/person-movie-lookup';
 import { buildProfileHighlights } from '@/lib/dashboard/profile-highlights';
-import { getCachedDailyPickResult } from '@/lib/dashboard/daily-pick-cache';
 import { dailyPickDateKey } from '@/lib/dashboard/daily-pick-format';
+import { resolveDailyPick } from '@/lib/dashboard/resolve-daily-pick';
+import {
+  purgeKnownQaTmdbRatings,
+  purgeSyntheticRatingsWhenImported,
+} from '@/lib/ratings/purge-synthetic-ratings';
+import { isSyntheticImdbId, rowsForImportedDisplay } from '@/lib/ratings/synthetic-imdb-id';
 import { loadCinephileStatsRows } from '@/lib/supabase/load-cinephile-stats';
+import { loadOrBuildProfile } from '@/lib/recommendation/load-profile-snapshot';
 
 export const instant = false;
 
@@ -60,31 +67,46 @@ export default async function DashboardPage() {
     onConflict: 'id',
   });
 
-  const { data: profile } = await supabase
+  const { data: userProfileRow } = await supabase
     .from('profiles')
     .select('full_name, avatar_url, email')
     .eq('id', user.id)
     .maybeSingle();
 
-  const fullName = getDisplayNameFromUser(user, profile);
+  const fullName = getDisplayNameFromUser(user, userProfileRow);
   const firstName = fullName.split(' ')[0] ?? fullName;
-  const avatarUrl = getAvatarUrlFromUser(user, profile);
+  const avatarUrl = getAvatarUrlFromUser(user, userProfileRow);
 
-  const { rows, schemaWarning } = await loadCinephileStatsRows(supabase, user.id);
+  let { rows, schemaWarning } = await loadCinephileStatsRows(supabase, user.id);
+
+  const importedOnly = rows.filter((r) => !isSyntheticImdbId(r.imdb_id));
+  if (importedOnly.length > 0) {
+    const purgeDb =
+      isSupabaseAdminConfigured() ? createSupabaseAdminClient() : supabase;
+    await purgeSyntheticRatingsWhenImported(purgeDb, user.id, importedOnly.length);
+    await purgeKnownQaTmdbRatings(purgeDb, user.id, importedOnly.length);
+    const reloaded = await loadCinephileStatsRows(supabase, user.id);
+    rows = reloaded.rows;
+    schemaWarning = reloaded.schemaWarning;
+  }
 
   if (schemaWarning && process.env.NODE_ENV === 'development') {
     console.warn('[dashboard]', schemaWarning);
   }
 
-  const hasData = rows.length > 0;
-  const stats = buildDashboardStats(rows);
-  const catalogMovies = cinephileRowsToMovies(rows);
+  const historyRows = rowsForImportedDisplay(rows);
+  const hasData = historyRows.length > 0;
+  const tasteProfile = hasData
+    ? await loadOrBuildProfile(supabase, user.id, historyRows)
+    : null;
+  const stats = buildDashboardStats(historyRows, tasteProfile);
+  const catalogMovies = cinephileRowsToMovies(historyRows);
   const recentMovies = catalogMovies.slice(0, 5);
   const recentActivity = catalogMovies.slice(0, 4);
-  const personMovieLookup = buildPersonMovieLookup(rows);
-  const profileHighlights = buildProfileHighlights(rows, stats);
+  const personMovieLookup = buildPersonMovieLookup(historyRows);
+  const profileHighlights = buildProfileHighlights(historyRows, stats);
   const dailyPick = hasData
-    ? await getCachedDailyPickResult(supabase, user.id)
+    ? await resolveDailyPick(supabase, user.id, historyRows, stats)
     : null;
 
   return (

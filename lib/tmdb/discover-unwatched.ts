@@ -1,13 +1,19 @@
-import { formatRecommendationReason } from '@/lib/recommendation/format-reason';
+import { fromTmdbMovieListItem, type MediaCandidate } from '@/lib/recommendation/media-candidate';
 import { rankCandidates } from '@/lib/recommendation/rank-candidates';
-import type { CandidateMovie, UserVectorProfile } from '@/lib/recommendation/types';
+import { scoreCandidatePartial } from '@/lib/recommendation/score-candidate';
+import type { UserVectorProfile } from '@/lib/recommendation/types';
+import { genreDisplayPercentages } from '@/lib/recommendation/build-user-profile';
 import { findTmdbByImdbId } from '@/lib/tmdb/find-by-imdb';
+import { fetchTmdbKeywords, mapWithConcurrency } from '@/lib/tmdb/keywords';
 import {
   discoverMoviesForTaste,
   fetchMovieImdbId,
   fetchMovieRecommendations,
   type TmdbMovieListItem,
 } from '@/lib/tmdb/movie-public';
+
+const PARTIAL_TOP = 15;
+const KEYWORD_FETCH_CONCURRENCY = 6;
 
 function normalizeImdb(id: string): string {
   const t = id.trim();
@@ -18,26 +24,6 @@ function isExcluded(imdbId: string | null, excluded: Set<string>): boolean {
   if (!imdbId) return false;
   const norm = normalizeImdb(imdbId);
   return excluded.has(norm) || excluded.has(imdbId);
-}
-
-function releaseYear(item: TmdbMovieListItem): number | null {
-  if (!item.release_date) return null;
-  const y = Number.parseInt(item.release_date.slice(0, 4), 10);
-  return Number.isFinite(y) ? y : null;
-}
-
-function tmdbItemToCandidate(item: TmdbMovieListItem): CandidateMovie {
-  return {
-    tmdbId: item.id,
-    title: item.title,
-    overview: item.overview,
-    posterPath: item.poster_path,
-    releaseYear: releaseYear(item),
-    voteAverage: item.vote_average,
-    voteCount: item.vote_count,
-    genreIds: item.genre_ids ?? [],
-    director: null,
-  };
 }
 
 function dedupeById(items: TmdbMovieListItem[]): TmdbMovieListItem[] {
@@ -68,7 +54,11 @@ export async function discoverUnwatchedMovie(
   seed: number,
 ): Promise<UnwatchedDiscoverPick | null> {
   const pool: TmdbMovieListItem[] = [];
-  const genreNames = profile.topGenreNames;
+  const genreNames = genreDisplayPercentages(profile)
+    .filter((g) => g.count > 0 && g.name !== 'Otros' && g.name !== '—')
+    .sort((a, b) => b.percentage - a.percentage)
+    .slice(0, 4)
+    .map((g) => g.name);
 
   for (let i = 0; i < genreNames.length; i++) {
     const genre = genreNames[i];
@@ -94,32 +84,45 @@ export async function discoverUnwatchedMovie(
   if (unique.length === 0) return null;
 
   const inspectOrder = [...unique].sort((a, b) => b.vote_average - a.vote_average);
-  const candidates: CandidateMovie[] = [];
+  const candidates: MediaCandidate[] = [];
 
-  for (const item of inspectOrder.slice(0, 28)) {
+  for (const item of inspectOrder.slice(0, 40)) {
     const imdbId = await fetchMovieImdbId(item.id);
     if (isExcluded(imdbId, excludedImdbIds)) continue;
-    candidates.push(tmdbItemToCandidate(item));
+    candidates.push(fromTmdbMovieListItem(item, { imdbId }));
   }
 
   if (candidates.length === 0) return null;
 
-  const ranked = rankCandidates(profile, candidates);
-  const top = ranked.slice(0, 8);
-  const pick = top[seed % top.length];
-  const item = pick.candidate;
-  const matchReason = formatRecommendationReason(pick.breakdown, profile);
+  const partialRanked = [...candidates]
+    .map((c) => ({ c, partial: scoreCandidatePartial(profile, c) }))
+    .sort((a, b) => b.partial - a.partial)
+    .slice(0, PARTIAL_TOP)
+    .map((x) => x.c);
 
-  const imdbId = await fetchMovieImdbId(item.tmdbId);
+  await mapWithConcurrency(partialRanked, KEYWORD_FETCH_CONCURRENCY, async (candidate) => {
+    if (candidate.keywords.length > 0) return candidate;
+    candidate.keywords = await fetchTmdbKeywords('movie', candidate.tmdbId);
+    return candidate;
+  });
+
+  const ranked = rankCandidates(profile, partialRanked);
+  const top = ranked.slice(0, 8);
+  const pick = top[0] ?? ranked[0];
+  if (!pick) return null;
+  const item = pick.candidate;
+
+  const imdbId =
+    item.imdbId ?? (await fetchMovieImdbId(item.tmdbId));
 
   return {
     tmdbId: item.tmdbId,
     imdbId,
-    title: item.title,
+    title: item.displayTitle,
     overview: item.overview,
     posterPath: item.posterPath,
     releaseYear: item.releaseYear,
     voteAverage: item.voteAverage,
-    matchReason,
+    matchReason: pick.reason,
   };
 }

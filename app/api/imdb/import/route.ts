@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { ImportedTitle } from '@/lib/imdb/types';
+import { scheduleTasteProfileRebuild } from '@/lib/jobs/rebuild-taste-profile';
 
 type ImportBody = {
   titles: ImportedTitle[];
@@ -130,6 +131,13 @@ export async function POST(request: NextRequest) {
   }
 
   const uniqueNew = [...new Set(newImdbIds)];
+
+  if (imported > 0) {
+    await scheduleTasteProfileRebuild(supabase, user.id, {
+      name: 'csv.import.completed',
+      data: { userId: user.id, imported },
+    });
+  }
 
   return NextResponse.json({
     imported,

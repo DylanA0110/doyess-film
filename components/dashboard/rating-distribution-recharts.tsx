@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { cn } from 'cn';
 
 function RatingBarTooltip({
   active,
@@ -39,11 +40,13 @@ function RatingBarTooltip({
 type RatingDistributionRechartsProps = {
   distribution: number[];
   onSelectRating?: (rating: number) => void;
+  className?: string;
 };
 
 export function RatingDistributionRecharts({
   distribution,
   onSelectRating,
+  className,
 }: RatingDistributionRechartsProps) {
   const [activeRating, setActiveRating] = React.useState<number | null>(null);
 
@@ -59,19 +62,25 @@ export function RatingDistributionRecharts({
   };
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-zinc-900/80 p-5 lg:col-span-2">
+    <div className={cn('df-dash-panel lg:col-span-2', className)}>
+      <div className="p-3 sm:p-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <h2 className="text-base font-semibold text-[#F4F6F3]">
-          Distribución de tus calificaciones
-        </h2>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8A0201]">
+            Historial
+          </p>
+          <h2 className="text-base font-semibold text-[#F4F6F3]">
+            Distribución de tus calificaciones
+          </h2>
+        </div>
         {onSelectRating ? (
           <p className="text-[10px] text-zinc-500 sm:text-xs">Toca una barra para ver títulos</p>
         ) : null}
       </div>
-      <div className="mt-4 h-44 w-full min-w-0 sm:h-52">
+      <div className="mt-4 h-40 w-full min-w-0 sm:h-52">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis
               dataKey="ratingLabel"
               tick={{ fill: '#71717a', fontSize: 11 }}
@@ -101,13 +110,14 @@ export function RatingDistributionRecharts({
               {data.map((entry) => (
                 <Cell
                   key={entry.rating}
-                  fill={activeRating === entry.rating ? '#c80000' : '#8A0201'}
-                  opacity={entry.count === 0 ? 0.25 : 1}
+                  fill={activeRating === entry.rating ? '#c41e1e' : '#8A0201'}
+                  opacity={entry.count === 0 ? 0.22 : 1}
                 />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+      </div>
       </div>
     </div>
   );

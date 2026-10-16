@@ -3,7 +3,10 @@ import {
   adaptiveShrinkageM,
   bayesianAverage,
   cosineSimilarity,
+  cosineSimilaritySparse,
+  exponentialTimeDecayWeight,
   mean,
+  normalizeVoteQuality,
   softmaxDistribution,
   stdDev,
   zScore,
@@ -43,5 +46,19 @@ describe('math', () => {
   it('adaptiveShrinkageM is looser with more ratings', () => {
     expect(adaptiveShrinkageM(10, 3)).toBe(5);
     expect(adaptiveShrinkageM(50, 3)).toBe(3);
+  });
+
+  it('exponentialTimeDecayWeight half-life at 1095 days', () => {
+    expect(exponentialTimeDecayWeight(1095)).toBeCloseTo(0.5, 5);
+    expect(exponentialTimeDecayWeight(0)).toBe(1);
+  });
+
+  it('cosineSimilaritySparse aligned vectors', () => {
+    expect(cosineSimilaritySparse({ a: 1 }, { a: 1 })).toBeCloseTo(1, 5);
+  });
+
+  it('normalizeVoteQuality bounded', () => {
+    expect(normalizeVoteQuality(8, 1000)).toBeGreaterThanOrEqual(0);
+    expect(normalizeVoteQuality(8, 1000)).toBeLessThanOrEqual(1);
   });
 });

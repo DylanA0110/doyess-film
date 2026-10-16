@@ -7,9 +7,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { DashboardGenreInsight, DashboardStats } from '@/components/dashboard/types';
+import type { MovieDetailTarget } from '@/components/dashboard/movie-detail-dialog';
 import { KpiGenreTasteBody } from '@/components/dashboard/kpi-genre-taste-body';
-import { MoviePoster } from '@/components/dashboard/movie-poster';
-import { Star } from 'lucide-react';
+import { DashboardTitleListItem } from '@/components/dashboard/dashboard-title-list-item';
 
 export type KpiDetailKind = 'catalog' | 'rating' | 'genre' | 'screen';
 
@@ -20,6 +20,7 @@ type KpiDetailDialogProps = {
   stats: DashboardStats;
   genreInsight?: DashboardGenreInsight | null;
   onSelectRating?: (rating: number) => void;
+  onOpenTitle?: (target: MovieDetailTarget) => void;
 };
 
 export function KpiDetailDialog({
@@ -29,6 +30,7 @@ export function KpiDetailDialog({
   stats,
   genreInsight,
   onSelectRating,
+  onOpenTitle,
 }: KpiDetailDialogProps) {
   if (!kind) return null;
 
@@ -48,7 +50,7 @@ export function KpiDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[min(92vh,44rem)] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto overscroll-contain border border-white/10 bg-[#0c0c0b] px-5 pb-8 pt-6 text-[#F4F6F3] sm:w-full"
+        className="dashboard-dark-scroll max-h-[min(92vh,44rem)] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto overscroll-contain border border-white/10 bg-[#101009] px-4 pb-8 pt-5 text-[#F4F6F3] sm:px-5 sm:pt-6 sm:w-full"
         showCloseButton
       >
         <DialogHeader className="pr-8">
@@ -61,9 +63,12 @@ export function KpiDetailDialog({
         ) : null}
         {kind === 'genre' ? (
           <>
-            <KpiGenreTasteBody movies={stats.genreTaste.movies} />
+            <KpiGenreTasteBody
+              movies={stats.genreTaste.movies}
+              series={stats.genreTaste.series}
+            />
             {resolvedGenre?.sampleTitles.length ? (
-              <GenreSamples insight={resolvedGenre} />
+              <GenreSamples insight={resolvedGenre} onOpenTitle={onOpenTitle} />
             ) : null}
           </>
         ) : null}
@@ -126,25 +131,35 @@ function ScreenBody({ stats }: { stats: DashboardStats }) {
   );
 }
 
-function GenreSamples({ insight }: { insight: DashboardGenreInsight }) {
+function GenreSamples({
+  insight,
+  onOpenTitle,
+}: {
+  insight: DashboardGenreInsight;
+  onOpenTitle?: (target: MovieDetailTarget) => void;
+}) {
   return (
     <ul className="mt-6 space-y-2 border-t border-white/8 pt-4">
       {insight.sampleTitles.map((item) => (
-        <li
-          key={item.id}
-          className="flex gap-3 rounded-xl border border-white/8 bg-zinc-950/50 p-2.5"
-        >
-          <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded">
-            <MoviePoster src={item.posterUrl} alt={item.title} sizes="40px" />
-          </div>
-          <div className="min-w-0 flex-1 py-0.5">
-            <p className="truncate text-sm text-[#F4F6F3]">{item.title}</p>
-            <p className="text-xs text-zinc-500">{item.year ?? '—'}</p>
-          </div>
-          <span className="flex items-center gap-1 self-center text-sm tabular-nums text-zinc-300">
-            <Star className="size-3.5 fill-amber-400 text-amber-400" />
-            {item.userRating}
-          </span>
+        <li key={item.id}>
+          <DashboardTitleListItem
+            title={item.title}
+            subtitle={item.year != null ? String(item.year) : '—'}
+            posterUrl={item.posterUrl}
+            userRating={item.userRating}
+            disabled={!item.tmdbId || !onOpenTitle}
+            onClick={() =>
+              item.tmdbId &&
+              onOpenTitle?.({
+                tmdbId: item.tmdbId,
+                mediaType: item.tmdbMediaType ?? (item.titleKind === 'series' ? 'tv' : 'movie'),
+                title: item.title,
+                year: item.year,
+                userRating: item.userRating,
+                posterUrl: item.posterUrl,
+              })
+            }
+          />
         </li>
       ))}
     </ul>
@@ -153,7 +168,7 @@ function GenreSamples({ insight }: { insight: DashboardGenreInsight }) {
 
 function StatLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/8 px-3 py-2.5">
+    <div className="rounded-xl border border-white/[0.08] bg-[#0a0a09] px-3 py-2.5">
       <p className="text-xs text-zinc-500">{label}</p>
       <p className="text-lg font-semibold text-[#F4F6F3]">{value}</p>
     </div>

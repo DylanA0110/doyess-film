@@ -26,7 +26,7 @@ import {
   type UserRating,
   type UserVectorProfile,
 } from '@/lib/recommendation/types';
-function buildCriticPersona(globalMean: number, globalStdDev: number): CriticPersona {
+export function buildCriticPersona(globalMean: number, globalStdDev: number): CriticPersona {
   let label = 'Equilibrado';
   let detail = `Tu media es ${globalMean.toFixed(1)}/10. ${consistencyLabel(globalStdDev)}`;
 
@@ -252,6 +252,8 @@ export function buildUserVectorProfile(ratings: UserRating[]): UserVectorProfile
     ratingsCount: ratings.length,
     moviesTaste,
     seriesTaste: null,
+    keywordVector: {},
+    topKeywords: [],
   };
 }
 

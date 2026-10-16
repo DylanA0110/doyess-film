@@ -5,6 +5,8 @@ export type DashboardMovie = {
   title: string;
   year?: number;
   titleKind?: TitleKind;
+  tmdbId?: number;
+  tmdbMediaType?: 'movie' | 'tv';
   rating?: number;
   userRating?: number;
   genres: string[];
@@ -59,6 +61,8 @@ export type DashboardGenreInsight = {
     userRating: number;
     posterUrl: string;
     titleKind: TitleKind;
+    tmdbId?: number;
+    tmdbMediaType?: 'movie' | 'tv';
   }>;
 };
 
@@ -143,6 +147,8 @@ export type DashboardStats = {
   topActors: DashboardPersonStat[];
   topActresses: DashboardPersonStat[];
   moviesRated10: DashboardMovie[];
+  seriesRated10: DashboardMovie[];
+  perfectSeries: { title: string; posterUrl: string; score: number };
   pendingRecommendations: number;
   pendingEnrichmentCount: number;
   withoutPosterCount: number;

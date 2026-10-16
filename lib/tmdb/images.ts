@@ -34,3 +34,9 @@ export function getTmdbProfileUrl(
 
   return `https://image.tmdb.org/t/p/${size}${profilePath}`;
 }
+
+/** Sube el retrato TMDB a h632 para el zoom de las cards de perfil. */
+export function tmdbProfileZoomUrl(url: string): string {
+  if (!url.startsWith('http')) return url;
+  return url.replace(/\/t\/p\/w\d+\//, '/t/p/h632/');
+}

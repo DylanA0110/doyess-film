@@ -6,7 +6,8 @@ import { getTmdbProfileUrl } from '@/lib/tmdb/images';
 import { NEUTRAL_POSTER, resolvePosterUrl } from '@/lib/imdb/poster-url';
 import { titleKindFromImdbType } from '@/lib/imdb/title-kind';
 import { actorCompositeScore, directorCompositeScore } from '@/lib/dashboard/highlight-scoring';
-import { getUserRecommendationProfile, titleGenreAffinity } from '@/lib/recommendation';
+import { computeAffinity, getUserRecommendationProfile } from '@/lib/recommendation';
+import { fromTmdbMovieListItem } from '@/lib/recommendation/media-candidate';
 
 const BLURB_MAX = 72;
 
@@ -45,7 +46,19 @@ function affinityScore(
 ): number {
   const profile = getUserRecommendationProfile(rows);
   if (profile) {
-    const cos = titleGenreAffinity(profile, row.genres ?? []);
+    const stub = fromTmdbMovieListItem(
+      {
+        id: 0,
+        title: row.title,
+        overview: '',
+        poster_path: null,
+        release_date: '',
+        vote_average: 0,
+        vote_count: 0,
+      },
+      { keywords: row.tmdb_keywords ?? [] },
+    );
+    const cos = computeAffinity(profile, stub);
     return cos * 5 + (row.rating / 10) * 3;
   }
   const top = topGenreSet(stats);

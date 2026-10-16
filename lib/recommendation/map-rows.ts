@@ -13,5 +13,6 @@ export function cinephileRowsToUserRatings(rows: CinephileStatsRow[]): UserRatin
     releaseYear: row.release_year,
     titleKind: titleKindFromImdbType(row.title_type),
     dateRated: row.date_rated,
+    keywords: row.tmdb_keywords ?? [],
   }));
 }

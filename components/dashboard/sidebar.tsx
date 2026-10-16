@@ -4,15 +4,11 @@ import * as React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { UserAvatarFill } from '@/components/dashboard/user-avatar-fill';
+import { dashboardNavItems } from '@/lib/dashboard/dashboard-nav';
 import {
-  LayoutDashboard,
-  Sparkles,
-  BarChart2,
-  BookOpen,
-  Bot,
-  Compass,
   ChevronDown,
   Upload,
+  Star,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -31,6 +27,7 @@ interface SidebarProps {
   currentTab: string;
   onSelectTab: (tab: string) => void;
   onOpenImporter: () => void;
+  onOpenRate?: () => void;
   hasData?: boolean;
   displayName: string;
   avatarUrl: string | null;
@@ -40,12 +37,14 @@ interface SidebarProps {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   className?: string;
+  includeBiblioteca?: boolean;
 }
 
 export function Sidebar({
   currentTab,
   onSelectTab,
   onOpenImporter,
+  onOpenRate,
   hasData,
   displayName,
   avatarUrl,
@@ -55,25 +54,9 @@ export function Sidebar({
   mobileOpen = false,
   onMobileClose,
   className,
+  includeBiblioteca = false,
 }: SidebarProps) {
-  const navItems = [
-    { id: 'resumen', label: 'Resumen', shortLabel: 'Resumen', icon: LayoutDashboard },
-    { id: 'para-vos', label: 'Para vos', shortLabel: 'Para vos', icon: Sparkles },
-    {
-      id: 'laboratorio',
-      label: 'Laboratorio de gustos',
-      shortLabel: 'Laboratorio',
-      icon: BarChart2,
-    },
-    { id: 'biblioteca', label: 'Mi biblioteca', shortLabel: 'Biblioteca', icon: BookOpen },
-    {
-      id: 'analista',
-      label: 'Analista de cine con IA',
-      shortLabel: 'Analista IA',
-      icon: Bot,
-    },
-    { id: 'explorar', label: 'Explorar', shortLabel: 'Explorar', icon: Compass },
-  ];
+  const navItems = dashboardNavItems(includeBiblioteca);
 
   const pickTab = (id: string) => {
     onSelectTab(id);
@@ -84,7 +67,7 @@ export function Sidebar({
     <aside
       className={cn(
         'relative flex min-h-screen flex-col border-r border-white/8 bg-[#0a0a09] select-none transition-[width] duration-200',
-        collapsed ? 'w-[4.5rem] px-2 py-4' : 'w-[min(100%,17.5rem)] px-4 py-4 sm:w-72',
+        collapsed ? 'w-[4.75rem] px-2 py-4' : 'w-[min(100%,17.5rem)] px-4 py-4 sm:w-72',
         className,
       )}
     >
@@ -93,52 +76,64 @@ export function Sidebar({
       </div>
 
       <div className="z-10 flex min-h-0 flex-1 flex-col gap-6">
-        <div className="flex shrink-0 items-center gap-2">
-          <Link
-            href="/"
-            className={cn(
-              'flex min-w-0 flex-1 items-center gap-2.5 group',
-              collapsed && 'flex-none justify-center',
-            )}
-            onClick={onMobileClose}
-          >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl transition group-hover:scale-105 sm:size-10">
-              <Image src="/doyess-logo.svg" alt="Doyess Film" width={32} height={32} priority />
-            </div>
-            {!collapsed ? (
-              <span className="truncate text-lg font-bold tracking-tight text-[#F4F6F3] sm:text-xl">
-                Doyess Film
-              </span>
-            ) : null}
-          </Link>
-
-          {mobileOpen && onMobileClose ? (
-            <button
-              type="button"
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-zinc-300 hover:bg-white/5 lg:hidden"
-              aria-label="Cerrar menú"
+        <div
+          className={cn(
+            'flex shrink-0 gap-2',
+            collapsed ? 'flex-col items-center' : 'items-center',
+          )}
+        >
+          <div className={cn('flex w-full items-center gap-2', collapsed && 'justify-center')}>
+            <Link
+              href="/"
+              className={cn(
+                'flex min-w-0 items-center gap-2.5 group',
+                collapsed ? 'justify-center' : 'flex-1',
+              )}
               onClick={onMobileClose}
             >
-              <X className="size-5" />
-            </button>
-          ) : null}
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl transition group-hover:scale-105 sm:size-10">
+                <Image src="/doyess-logo.svg" alt="Doyess Film" width={32} height={32} priority />
+              </div>
+              {!collapsed ? (
+                <span className="truncate text-lg font-bold tracking-tight text-[#F4F6F3] sm:text-xl">
+                  Doyess Film
+                </span>
+              ) : null}
+            </Link>
 
-          {onToggleCollapsed && !mobileOpen ? (
+            {mobileOpen && onMobileClose ? (
+              <button
+                type="button"
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-zinc-300 hover:bg-white/5 lg:hidden"
+                aria-label="Cerrar menú"
+                onClick={onMobileClose}
+              >
+                <X className="size-5" />
+              </button>
+            ) : null}
+
+            {onToggleCollapsed && !mobileOpen && !collapsed ? (
+              <button
+                type="button"
+                onClick={onToggleCollapsed}
+                className="hidden size-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-400 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-[#F4F6F3] lg:flex"
+                aria-label="Contraer menú"
+                title="Solo iconos"
+              >
+                <PanelLeftClose className="size-3.5" />
+              </button>
+            ) : null}
+          </div>
+
+          {onToggleCollapsed && !mobileOpen && collapsed ? (
             <button
               type="button"
               onClick={onToggleCollapsed}
-              className={cn(
-                'hidden shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-400 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-[#F4F6F3] lg:flex',
-                collapsed ? 'size-9' : 'size-8',
-              )}
-              aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
-              title={collapsed ? 'Expandir menú' : 'Solo iconos'}
+              className="hidden w-full items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] py-2 text-zinc-400 transition hover:border-white/20 hover:bg-white/[0.06] hover:text-[#F4F6F3] lg:flex"
+              aria-label="Expandir menú"
+              title="Expandir menú"
             >
-              {collapsed ? (
-                <PanelLeftOpen className="size-4" />
-              ) : (
-                <PanelLeftClose className="size-3.5" />
-              )}
+              <PanelLeftOpen className="size-4" />
             </button>
           ) : null}
         </div>
@@ -180,6 +175,7 @@ export function Sidebar({
             );
           })}
         </nav>
+
       </div>
 
       <div className="z-10 mt-4 shrink-0 border-t border-white/8 pt-4">
@@ -197,10 +193,13 @@ export function Sidebar({
               </div>
               {!collapsed ? (
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium leading-none text-[#F4F6F3]">
+                  <p
+                    suppressHydrationWarning
+                    className="truncate text-sm font-medium leading-none text-[#F4F6F3]"
+                  >
                     {displayName}
                   </p>
-                  <p className="mt-1 truncate text-xs text-zinc-500">
+                  <p suppressHydrationWarning className="mt-1 truncate text-xs text-zinc-500">
                     {subtitle ?? (hasData ? 'Historial importado' : 'Sin historial')}
                   </p>
                 </div>
@@ -213,6 +212,18 @@ export function Sidebar({
             side="top"
             className="w-56 border border-white/10 bg-zinc-900 text-[#F4F6F3] shadow-2xl"
           >
+            {onOpenRate ? (
+              <DropdownMenuItem
+                onClick={() => {
+                  onOpenRate();
+                  onMobileClose?.();
+                }}
+                className="cursor-pointer gap-2 focus:bg-[#8A0201]/30 focus:text-white"
+              >
+                <Star className="size-4 text-amber-400" />
+                <span>Calificar título</span>
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem
               onClick={() => {
                 onOpenImporter();

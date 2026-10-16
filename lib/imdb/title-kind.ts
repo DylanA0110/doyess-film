@@ -32,3 +32,7 @@ export function titleKindLabel(kind: TitleKind): string {
 export function rowsForMovieKpis<T extends { title_type?: string | null }>(rows: T[]): T[] {
   return rows.filter((r) => titleKindFromImdbType(r.title_type) === 'movie');
 }
+
+export function rowsForSeriesKpis<T extends { title_type?: string | null }>(rows: T[]): T[] {
+  return rows.filter((r) => titleKindFromImdbType(r.title_type) === 'series');
+}

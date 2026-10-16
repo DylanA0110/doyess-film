@@ -31,11 +31,13 @@ export function ParaVosMasonry({ highlights, onOpenGenreDetail }: ParaVosMasonry
       >
       {cards.map((h) => (
         <div key={h.kind} className="card-animation-layer">
-          <article className="para-vos-masonry-card card">
-            <FlipRevealCard
-              highlight={h}
-              onGenreDetail={h.openGenreDetail ? onOpenGenreDetail : undefined}
-            />
+          <article className="df-sunset-card para-vos-masonry-card--sunset w-full">
+            <div className="df-sunset-card__glass para-vos-masonry-card card">
+              <FlipRevealCard
+                highlight={h}
+                onGenreDetail={h.openGenreDetail ? onOpenGenreDetail : undefined}
+              />
+            </div>
           </article>
         </div>
       ))}

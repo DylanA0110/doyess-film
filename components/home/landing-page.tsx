@@ -165,12 +165,6 @@ export function LandingPage({ devSkipAuth = false, heroAssets }: LandingPageProp
 
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="relative hidden min-w-0 flex-1 sm:block sm:max-w-xs lg:max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8E908C]" />
-              <Input
-                readOnly
-                placeholder="Buscar películas, directores, géneros..."
-                className="h-10 w-full rounded-full border-white/10 bg-neutral-900/50 pl-10 text-sm text-[#F4F6F3] placeholder:text-[#8E908C]"
-              />
             </div>
             {devSkipAuth ? (
               <Link href={dashboardHref} className="flex items-center gap-1.5 rounded-full outline-none">
@@ -223,14 +217,14 @@ export function LandingPage({ devSkipAuth = false, heroAssets }: LandingPageProp
                 </span>
               </h1>
               <p className="mt-5 max-w-md text-base leading-relaxed text-[#8E908C]">
-                Doyess Film analiza tus gustos, descubre patrones en tu historial y te recomienda
-                películas que realmente van contigo. Explora, comprende y redescubre el cine.
+                Califica películas y series en la app o importa tu CSV de IMDb. Analizamos tus
+                gustos, descubrimos patrones y te recomendamos títulos que van contigo.
               </p>
               <div className="mt-8">
                 <LandingAuthCta devSkipAuth={devSkipAuth} />
               </div>
               <p className="mt-4 max-w-md text-[11px] leading-relaxed text-[#8E908C]/90">
-                Importa tu historial de IMDb • Sincroniza con Supabase • Recomendaciones
+                Califica en la app o importa IMDb • Perfil de gustos • Recomendaciones
                 personalizadas
               </p>
             </div>

@@ -4,10 +4,13 @@ import * as React from 'react';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { CsvImporterDialog } from './csv-importer-dialog';
+import { RateTitleInline } from './rate-title-inline';
+import { useRateFlowStore } from '@/stores/rate-flow-store';
 import { DashboardEmptyState } from './dashboard-empty-state';
 import { DashboardExplorar } from './dashboard-explorar';
 import { DashboardParaVos } from './dashboard-para-vos';
 import { DashboardResumenWithData } from './dashboard-resumen-with-data';
+import { DashboardBiblioteca } from './dashboard-biblioteca';
 import type {
   DailyPickResult,
   DashboardMovie,
@@ -84,23 +87,27 @@ export function DashboardView({
     });
   };
 
+  const requestSearchFocus = useRateFlowStore((s) => s.requestSearchFocus);
+
   const movieCountLabel = hasData
     ? `${stats.moviesWatched} películas`
     : 'Sin historial';
 
   return (
     <div className="min-h-screen bg-[#050000] text-[#F4F6F3] lg:flex lg:items-stretch">
-      <div className="hidden shrink-0 lg:sticky lg:top-0 lg:self-start lg:max-h-screen lg:overflow-hidden lg:block">
+      <div className="hidden shrink-0 lg:sticky lg:top-0 lg:self-start lg:max-h-screen lg:block">
         <Sidebar
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
           onOpenImporter={() => setIsImporterOpen(true)}
+          onOpenRate={requestSearchFocus}
           hasData={hasData}
           displayName={displayName}
           avatarUrl={avatarUrl}
           subtitle={movieCountLabel}
           collapsed={sidebarCollapsed}
           onToggleCollapsed={toggleCollapsed}
+          includeBiblioteca={hasData}
         />
       </div>
 
@@ -112,25 +119,30 @@ export function DashboardView({
           currentTab={currentTab}
           onSelectTab={setCurrentTab}
           onOpenImporter={() => setIsImporterOpen(true)}
+          onOpenRate={requestSearchFocus}
           hasData={hasData}
           displayName={displayName}
           avatarUrl={avatarUrl}
           subtitle={movieCountLabel}
+          includeBiblioteca={hasData}
         />
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           onOpenImporter={() => setIsImporterOpen(true)}
+          onOpenRate={requestSearchFocus}
           onOpenMobileNav={() => setMobileNavOpen(true)}
           hasData={hasData}
           avatarUrl={avatarUrl}
           displayName={displayName}
         />
 
+        <RateTitleInline userId={userId} />
+
         <main
           id="dashboard-main"
-          className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-6 lg:p-7"
+          className="dashboard-dark-scroll mx-auto w-full max-w-[1600px] flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-7"
           tabIndex={-1}
         >
           {currentTab === 'resumen' ? (
@@ -171,7 +183,22 @@ export function DashboardView({
             )
           ) : currentTab === 'explorar' ? (
             hasData ? (
-              <DashboardExplorar userName={userName} stats={stats} />
+              <DashboardExplorar userName={userName} userId={userId} stats={stats} />
+            ) : (
+              <DashboardEmptyState
+                userName={userName}
+                userId={userId}
+                schemaWarning={schemaWarning}
+              />
+            )
+          ) : currentTab === 'biblioteca' ? (
+            hasData ? (
+              <DashboardBiblioteca
+                userId={userId}
+                userName={userName}
+                stats={stats}
+                catalogMovies={catalogMovies}
+              />
             ) : (
               <DashboardEmptyState
                 userName={userName}

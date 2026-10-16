@@ -2,11 +2,14 @@
 
 import * as React from 'react';
 import { UserAvatarFill } from '@/components/dashboard/user-avatar-fill';
-import { Search, Bell, FileSpreadsheet, Menu } from 'lucide-react';
+import { RateSearchDropdown } from '@/components/dashboard/rate-search-dropdown';
+import { Search, Bell, FileSpreadsheet, Menu, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useRateFlowStore } from '@/stores/rate-flow-store';
 
 interface TopbarProps {
   onOpenImporter: () => void;
+  onOpenRate?: () => void;
   onOpenMobileNav?: () => void;
   hasData?: boolean;
   avatarUrl: string | null;
@@ -15,12 +18,33 @@ interface TopbarProps {
 
 export function Topbar({
   onOpenImporter,
+  onOpenRate,
   onOpenMobileNav,
   hasData,
   avatarUrl,
   displayName,
 }: TopbarProps) {
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const searchQuery = useRateFlowStore((s) => s.searchQuery);
+  const setSearchQuery = useRateFlowStore((s) => s.setSearchQuery);
+  const requestSearchFocus = useRateFlowStore((s) => s.requestSearchFocus);
+  const focusSearchNonce = useRateFlowStore((s) => s.focusSearchNonce);
+
+  const searchRef = React.useRef<HTMLInputElement>(null);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (focusSearchNonce > 0) {
+      searchRef.current?.focus();
+      setSearchOpen(true);
+      onOpenRate?.();
+    }
+  }, [focusSearchNonce, onOpenRate]);
+
+  const focusSearch = () => {
+    requestSearchFocus();
+    onOpenRate?.();
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-white/5 bg-[#050000]/90 px-3 backdrop-blur-xl sm:h-16 sm:gap-4 sm:px-6">
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
@@ -33,30 +57,53 @@ export function Topbar({
           <Menu className="size-5" />
         </button>
         <div className="relative min-w-0 flex-1 max-w-xl">
-          <label className="sr-only" htmlFor="dashboard-search">Buscar en tu biblioteca</label>
+          <label className="sr-only" htmlFor="dashboard-search">
+            Buscar película o serie para calificar
+          </label>
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#F4F6F3]/40" />
           <input
+            ref={searchRef}
             id="dashboard-search"
             type="search"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar…"
+            onFocus={() => setSearchOpen(true)}
+            onBlur={() => window.setTimeout(() => setSearchOpen(false), 150)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSearchOpen(true);
+            }}
+            placeholder="Buscar para calificar…"
             className="h-9 w-full rounded-full border border-white/8 bg-[#101009]/80 pl-9 pr-3 text-sm text-[#F4F6F3] placeholder-[#F4F6F3]/40 outline-none transition focus:border-[#8A0201]/60 focus:ring-1 focus:ring-[#8A0201]/50 sm:h-10 sm:pl-10 sm:pr-4"
+          />
+          <RateSearchDropdown
+            query={searchQuery}
+            open={searchOpen}
+            onSelect={() => setSearchOpen(false)}
           />
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
+        {onOpenRate ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={focusSearch}
+            className="hidden rounded-full border-amber-500/30 bg-amber-500/10 px-3.5 text-xs font-medium text-[#F4F6F3] hover:bg-amber-500/20 sm:inline-flex sm:items-center sm:gap-2"
+          >
+            <Star className="size-3.5 text-amber-400" />
+            Calificar
+          </Button>
+        ) : null}
         <Button
           variant="outline"
           size="sm"
           onClick={onOpenImporter}
-          className="inline-flex items-center gap-1.5 rounded-full border-[#8A0201]/30 bg-[#8A0201]/10 px-2.5 text-[10px] font-medium text-[#F4F6F3] hover:bg-[#8A0201]/25 sm:gap-2 sm:px-3.5 sm:text-xs"
+          aria-label={hasData ? 'Historial IMDb importado' : 'Importar CSV de IMDb'}
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border-[#8A0201]/30 bg-[#8A0201]/10 p-0 text-[#F4F6F3] hover:bg-[#8A0201]/25 sm:size-auto sm:gap-2 sm:px-3.5 sm:py-2 sm:text-xs"
         >
           <FileSpreadsheet className="size-3.5 text-[#8A0201]" />
-          <span className="hidden xs:inline sm:inline">
-            {hasData ? 'IMDb ✓' : 'CSV'}
-          </span>
+          <span className="hidden sm:inline">{hasData ? 'IMDb ✓' : 'CSV'}</span>
         </Button>
 
         <button

@@ -14,6 +14,7 @@ import { NEUTRAL_POSTER, resolvePosterUrl } from '@/lib/imdb/poster-url';
 import { personNamesMatch } from '@/lib/imdb/normalize-person-name';
 import {
   rowsForMovieKpis,
+  rowsForSeriesKpis,
   titleKindFromImdbType,
   type TitleKind,
 } from '@/lib/imdb/title-kind';
@@ -29,7 +30,7 @@ import {
   genreDisplayPercentagesForSlice,
   getUserRecommendationProfile,
 } from '@/lib/recommendation';
-import type { TitleKindTasteSlice } from '@/lib/recommendation/types';
+import type { TitleKindTasteSlice, UserVectorProfile } from '@/lib/recommendation/types';
 
 export type CinephileStatsRow = {
   user_id: string;
@@ -47,6 +48,9 @@ export type CinephileStatsRow = {
   crew_snapshot?: TmdbCrewSnapshotEntry[] | null;
   rating: number;
   date_rated: string | null;
+  tmdb_id?: number | null;
+  tmdb_media_type?: string | null;
+  tmdb_keywords?: string[] | null;
 };
 
 const genreColors = ['#8A0201', '#5B1E31', '#C80000', '#801818', '#D97706'];
@@ -78,6 +82,7 @@ function formatLastUpdated(dates: string[]) {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'America/Mexico_City',
   });
 }
 
@@ -97,12 +102,21 @@ function findCrewPhoto(directorName: string, rows: CinephileStatsRow[]): string 
   return NEUTRAL_POSTER;
 }
 
+function tmdbMediaTypeFromRow(row: CinephileStatsRow): 'movie' | 'tv' | undefined {
+  const raw = row.tmdb_media_type?.trim();
+  if (raw === 'tv' || raw === 'movie') return raw;
+  return titleKindFromImdbType(row.title_type) === 'series' ? 'tv' : 'movie';
+}
+
 export function cinephileRowToMovie(row: CinephileStatsRow): DashboardMovie {
+  const mediaType = tmdbMediaTypeFromRow(row);
   return {
     id: row.movie_id,
     title: row.title,
     year: row.release_year ?? undefined,
     titleKind: titleKindFromImdbType(row.title_type),
+    tmdbId: row.tmdb_id ?? undefined,
+    tmdbMediaType: mediaType,
     userRating: row.rating,
     genres: row.genres ?? [],
     director: row.directors?.[0],
@@ -285,6 +299,8 @@ function buildGenreInsight(
       userRating: row.rating,
       posterUrl: resolvePosterUrl(row.poster_path),
       titleKind: titleKindFromImdbType(row.title_type),
+      tmdbId: row.tmdb_id ?? undefined,
+      tmdbMediaType: tmdbMediaTypeFromRow(row),
     }));
 
   const highlight = samples
@@ -308,14 +324,18 @@ function buildGenreInsight(
   };
 }
 
-export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
+export function buildDashboardStats(
+  rows: CinephileStatsRow[],
+  profileOverride?: UserVectorProfile | null,
+): DashboardStats {
   if (rows.length === 0) {
     return emptyDashboardStats();
   }
 
   const movieRows = rowsForMovieKpis(rows);
+  const seriesRows = rowsForSeriesKpis(rows);
   const titleKindBreakdown = buildTitleKindBreakdown(rows);
-  const profile = getUserRecommendationProfile(rows);
+  const profile = profileOverride ?? getUserRecommendationProfile(rows);
   if (!profile) {
     const base = emptyDashboardStats();
     return { ...base, titleKindBreakdown };
@@ -382,9 +402,15 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     .sort((a, b) => (b.date_rated ?? '').localeCompare(a.date_rated ?? ''))
     .map(cinephileRowToMovie);
 
+  const seriesRated10 = seriesRows
+    .filter((row) => row.rating === 10)
+    .sort((a, b) => (b.date_rated ?? '').localeCompare(a.date_rated ?? ''))
+    .map(cinephileRowToMovie);
+
   const topDirectorEntry = topDirectors[0];
   const topActorEntry = topActors[0];
   const topRated = [...movieRows].sort((a, b) => b.rating - a.rating)[0];
+  const topRatedSeries = [...seriesRows].sort((a, b) => b.rating - a.rating)[0];
 
   const ratingSummary = getRatingSummary(movieRows);
 
@@ -416,7 +442,7 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     },
     growingGenre: {
       name: dominantGenreName,
-      delta: `${dominantGenrePercent}% de afinidad en tu historial`,
+      delta: `${dominantGenrePercent}% de tu historial en este género`,
     },
     ratingDistribution,
     dominantGenreName,
@@ -431,6 +457,12 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     topActors,
     topActresses,
     moviesRated10,
+    seriesRated10,
+    perfectSeries: {
+      title: topRatedSeries?.title ?? '—',
+      posterUrl: topRatedSeries ? resolvePosterUrl(topRatedSeries.poster_path) : NEUTRAL_POSTER,
+      score: topRatedSeries?.rating ?? 0,
+    },
     pendingRecommendations: 0,
     pendingEnrichmentCount,
     withoutPosterCount,
@@ -453,7 +485,7 @@ export function buildDashboardStats(rows: CinephileStatsRow[]): DashboardStats {
     dominantGenreByFrequency: profile.dominantByFrequency,
     genreTaste: {
       movies: profile.moviesTaste ? mapTasteSliceToBlock(profile.moviesTaste, 0) : null,
-      series: null,
+      series: profile.seriesTaste ? mapTasteSliceToBlock(profile.seriesTaste, 2) : null,
     },
   };
 }
@@ -489,6 +521,8 @@ export function emptyDashboardStats(): DashboardStats {
     topActors: [],
     topActresses: [],
     moviesRated10: [],
+    seriesRated10: [],
+    perfectSeries: { title: '—', posterUrl: NEUTRAL_POSTER, score: 0 },
     pendingRecommendations: 0,
     pendingEnrichmentCount: 0,
     withoutPosterCount: 0,

@@ -1,6 +1,14 @@
 import type { TitleKind } from '@/components/dashboard/types';
 
-export const ALGORITHM_VERSION = 2;
+export const ALGORITHM_VERSION = 3;
+
+export const SCORE_WEIGHT_AFFINITY = 0.6;
+export const SCORE_WEIGHT_QUALITY = 0.3;
+export const SCORE_WEIGHT_DIRECTOR = 0.1;
+
+export const HIDDEN_GEM_VOTE_MAX = 1500;
+export const HIDDEN_GEM_AFFINITY_MIN = 0.8;
+export const HIDDEN_GEM_MULTIPLIER = 1.5;
 
 export const BAYES_M_GENRE = 3;
 export const BAYES_M_DIRECTOR = 2;
@@ -18,6 +26,7 @@ export type UserRating = {
   releaseYear: number | null;
   titleKind: TitleKind;
   dateRated: string | null;
+  keywords?: string[];
 };
 
 export type GenreBayesianStat = {
@@ -72,6 +81,23 @@ export type UserVectorProfile = {
   ratingsCount: number;
   moviesTaste: TitleKindTasteSlice | null;
   seriesTaste: TitleKindTasteSlice | null;
+  /** Sparse TF-IDF L2-normalizado (v3) */
+  keywordVector: Record<string, number>;
+  topKeywords: string[];
+};
+
+export type ScoreResultBreakdown = {
+  affinity: number;
+  qualityNorm: number;
+  directorBonusNorm: number;
+  hiddenGemMultiplier: number;
+  alignedKeywords: string[];
+};
+
+export type ScoreResult = {
+  finalScore: number;
+  reason: string;
+  breakdown: ScoreResultBreakdown;
 };
 
 export type CandidateMovie = {

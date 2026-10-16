@@ -9,6 +9,8 @@ import {
   storedToResult,
 } from '@/lib/dashboard/daily-pick-cache';
 import { dailyPickDateKey } from '@/lib/dashboard/daily-pick-format';
+import { isStoredDailyPickStale } from '@/lib/dashboard/daily-pick-stale';
+import { refreshDailyPickReason } from '@/lib/dashboard/refresh-daily-pick-reason';
 import { discoverUnwatchedMovie } from '@/lib/tmdb/discover-unwatched';
 import { fetchMovieDetail } from '@/lib/tmdb/movie-public';
 
@@ -39,7 +41,16 @@ export async function resolveDailyPick(
 
   if (cached) {
     cached = await backfillDailyPickLocale(supabase, userId, pickDate, cached);
-    return storedToResult(cached, now);
+    const stale = await isStoredDailyPickStale(cached, rows);
+    if (!stale) {
+      const result = storedToResult(cached, now);
+      return refreshDailyPickReason(result, rows);
+    }
+    await supabase
+      .from('user_daily_picks')
+      .delete()
+      .eq('user_id', userId)
+      .eq('pick_date', pickDate);
   }
 
   const excluded = new Set<string>();

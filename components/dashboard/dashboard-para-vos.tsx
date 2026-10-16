@@ -11,6 +11,10 @@ import {
   KpiDetailDialog,
   type KpiDetailKind,
 } from '@/components/dashboard/kpi-detail-dialog';
+import {
+  MovieDetailDialog,
+  type MovieDetailTarget,
+} from '@/components/dashboard/movie-detail-dialog';
 
 type DashboardParaVosProps = {
   userName: string;
@@ -34,6 +38,8 @@ export function DashboardParaVos({
   const [kpiOpen, setKpiOpen] = React.useState(false);
   const [kpiKind, setKpiKind] = React.useState<KpiDetailKind | null>(null);
   const [genreInsight, setGenreInsight] = React.useState(stats.dominantGenreInsight);
+  const [detailOpen, setDetailOpen] = React.useState(false);
+  const [detailTarget, setDetailTarget] = React.useState<MovieDetailTarget | null>(null);
 
   const openKpi = (kind: KpiDetailKind, genreName?: string) => {
     setKpiKind(kind);
@@ -69,7 +75,7 @@ export function DashboardParaVos({
         </div>
       ) : (
         <p className="py-8 text-center text-sm text-zinc-500">
-          Importa tu CSV para desbloquear tu pick diario y tus cartas.
+          Califica un título o importa tu CSV para desbloquear tu pick diario y tus cartas.
         </p>
       )}
 
@@ -86,6 +92,18 @@ export function DashboardParaVos({
         kind={kpiKind}
         stats={stats}
         genreInsight={genreInsight}
+        onOpenTitle={(target) => {
+          setKpiOpen(false);
+          setDetailTarget(target);
+          setDetailOpen(true);
+        }}
+      />
+
+      <MovieDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        target={detailTarget}
+        userId={userId}
       />
     </div>
   );

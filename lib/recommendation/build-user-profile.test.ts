@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildUserVectorProfile } from './build-user-profile';
+import { buildUserRecommendationProfile } from './build-keyword-profile';
 import type { UserRating } from './types';
 
 function fixtureRatings(): UserRating[] {
@@ -32,9 +32,9 @@ function fixtureRatings(): UserRating[] {
   return rows;
 }
 
-describe('buildUserVectorProfile', () => {
+describe('buildUserRecommendationProfile', () => {
   it('low rating lowers genre bayesian vs high cluster', () => {
-    const profile = buildUserVectorProfile(fixtureRatings());
+    const profile = buildUserRecommendationProfile(fixtureRatings());
     expect(profile).not.toBeNull();
     const drama = profile!.genreStats.find((g) => g.name === 'Drama');
     expect(drama).toBeDefined();
@@ -57,7 +57,7 @@ describe('buildUserVectorProfile', () => {
       });
     }
     const t0 = performance.now();
-    buildUserVectorProfile(big);
+    buildUserRecommendationProfile(big);
     const elapsed = performance.now() - t0;
     expect(elapsed).toBeLessThan(120);
   });

@@ -1,83 +1,58 @@
 # Motor de recomendación
 
-Versión: `ALGORITHM_VERSION` en [`lib/recommendation/types.ts`](../lib/recommendation/types.ts) (actualmente **2**).
+Versión: `ALGORITHM_VERSION` en [`lib/recommendation/types.ts`](../lib/recommendation/types.ts) (**3**).
+
+## Hub central
+
+Un solo perfil (`buildUserRecommendationProfile` / `getUserRecommendationProfile`) alimenta:
+
+- KPIs del dashboard (`buildDashboardStats` — misma forma `DashboardStats`, sin cambios de UI)
+- Highlights / cards (`profile-highlights`, `computeAffinity`)
+- Insights (`buildCinephileInsights`)
+- Película del día (`discoverUnwatchedMovie`)
+- Carriles (`getRecommendedLane`)
+
+Caché opcional: tabla `user_taste_profiles` vía `loadOrBuildProfile`.
 
 ## Alcance de datos
 
-| Tipo IMDb | Uso en KPIs de cine | Uso en recomendación |
-|-----------|---------------------|----------------------|
-| Película  | Sí                  | Sí (perfil + película del día) |
-| Serie (show) | No (solo catálogo) | No (por ahora) |
-| Capítulo  | No                  | No (ingesta futura) |
+| Tipo IMDb | KPIs conteo/runtime | Perfil + scoring |
+|-----------|---------------------|------------------|
+| Película  | Sí                  | Sí               |
+| Serie     | Bloque series       | Sí               |
+| Capítulo  | Solo conteo         | No               |
 
-## Flujo
+## Perfil v3
 
-1. `user_ratings` + `movies` → `CinephileStatsRow[]`
-2. `getUserRecommendationProfile(rows)` → solo filas `movie` → `UserVectorProfile`
-3. Candidatos TMDB → `rankCandidates(profile, candidates)`
+1. `user_ratings` + `movies` (+ `tmdb_keywords`, `tmdb_media_type`) → ratings
+2. Z-score por nota; **time decay** `exp(-(ln2/halfLife)*days)` con half-life 1095 días
+3. Keywords: títulos con `z * decay > 0.5` → TF-IDF (IDF global genéricas + IDF local)
+4. Géneros/directores: agregados con Z ponderado por decay (Bayes como v2)
+5. `keywordVector` sparse L2-normalizado
 
-## Fórmulas (v2)
-
-### Z-Score
-
-\[
-z = \frac{x - \mu}{\sigma}
-\]
-
-Atribución a **géneros** y **directores**: se promedia el Z por título en ese género/director (no la nota cruda), para medir gusto relativo a tu escala.
-
-### Shrinkage Bayesiano adaptativo
-
-\[
-\text{Bayes} = \frac{v}{v+m} R + \frac{m}{v+m} C
-\]
-
-- Géneros: `R` = media de Z en el género, `C` = 0, `m = adaptiveShrinkageM(n, 3)`.
-- Directores: igual con `m` base 2.
-- Con pocos ratings, `m` sube ligeramente (más prior); con historial largo, más peso a tus datos.
-
-### Porcentajes en UI
-
-Los % de afinidad en gráficos salen de **softmax** sobre los Z medios por género (siempre positivos y suman ~100), no de notas crudas.
-
-### Vector de usuario
-
-Eje fijo TMDB (`GENRE_AXIS`); cada índice = `max(0, score Bayesiano del género)`; luego **L2**.
-
-### Similitud del coseno
-
-Entre vector de usuario **U** y candidato **M** (géneros TMDB, L2).
-
-### Score final (candidato)
+## Scoring candidato (`scoreCandidate`)
 
 ```
-finalScore = cosineAffinity + log10(vote_count) * (vote_average/100) + directorBonus
+base = 0.6*affinity + 0.3*qualityNorm + 0.1*directorBonus
+final = min(base * hiddenGemMultiplier, 1.0)
 ```
 
-## Literatura y próximos pasos
+- **Afinidad:** coseno sparse entre keywords usuario y candidato
+- **Calidad:** `normalizeVoteQuality(voteAverageAdj, voteCount)`; TV: `voteAverage - 0.5`
+- **Hidden gem:** `voteCount < 1500` y afinidad `> 0.8` → `×1.5` antes del clamp
 
-Referencias útiles para afinar el gusto (sin red social masiva hoy; preparan fases futuras):
+## Explorar (UI)
 
-| Enfoque | Idea | Aplicación en Doyess |
-|---------|------|----------------------|
-| **Modelos jerárquicos Bayesianos** (Basu et al., SIGIR 2007) | Prior poblacional + perfil individual; shrinkage cuando hay pocos datos | Ya usamos Bayes + `m` adaptativo; fase 3: prior global entre usuarios (opcional, OSS). |
-| **Matchbox** (Stern et al., 2009) | Rasgos usuario/ítem, ratings ordinales, drift temporal | Fase 3: peso por antigüedad de la nota; escala personal por usuario. |
-| **Matrix factorization Bayesiana** | Factores latentes con incertidumbre | Fase 4 con muchos usuarios y ratings cruzados. |
-| **AMP-CF** (Vargas & Castells, 2023) | Varias “personas” latentes por usuario | Explicaría contrastes (ej. terror vs drama); fase 4 para insights “multi-perfil”. |
-| **Content-based + CF híbrido** | Géneros/directores + vecinos | Hoy content-based; TMDB descubrimiento + coseno. |
+- Carriles: géneros Bayes del usuario, series (`tv`) si hay `seriesTaste`, joyas ocultas (sin rellenar con populares si hay &lt;4 candidatos), patrones e insights.
+- Badge en tarjetas: `formatExploreMatchBadge` — porcentaje solo con afinidad híbrida (keywords + fallback género); si no hay señal fuerte, etiqueta legible.
+- Al **calificar** desde el dashboard: `persistUserRating` guarda `tmdb_keywords` y directores de TMDB de inmediato; invalida caché explore y dispara rebuild de perfil (requiere `SUPABASE_SERVICE_ROLE_KEY` para el job async).
 
-### Mejoras priorizadas (código)
+## Carriles / discover (anti rate-limit)
 
-1. **v2 (hecho):** Z en géneros, shrinkage adaptativo, softmax en UI, KPIs solo películas.
-2. **v3:** Decaimiento temporal en agregados (Matchbox-style).
-3. **v3:** IDF sobre géneros muy frecuentes (evitar que “Drama” domine por etiquetado).
-4. **v4:** Personas múltiples (clustering suave de ratings por género/época).
-
-## Consumidores
-
-- Dashboard (`buildDashboardStats`) — solo `movie` en KPIs
-- Película del día (`discoverUnwatchedMovie`)
-- Explorar — mismos pools + `rankCandidates`
+1. Filtrar `seenIdsSet` (`m_` / `t_` TMDB)
+2. Pre-rank con `scoreCandidatePartial` (calidad + director)
+3. Top 15 → fetch keywords TMDB (concurrencia limitada)
+4. Score completo → top N
 
 ## Tests
 

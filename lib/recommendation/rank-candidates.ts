@@ -1,18 +1,17 @@
+import type { MediaCandidate } from '@/lib/recommendation/media-candidate';
 import { scoreCandidate } from '@/lib/recommendation/score-candidate';
-import type {
-  CandidateMovie,
-  ScoredCandidate,
-  UserVectorProfile,
-} from '@/lib/recommendation/types';
+import type { ScoreResult, UserVectorProfile } from '@/lib/recommendation/types';
+
+export type ScoredMediaCandidate = ScoreResult & { candidate: MediaCandidate };
 
 export function rankCandidates(
   profile: UserVectorProfile,
-  candidates: CandidateMovie[],
-): ScoredCandidate[] {
+  candidates: MediaCandidate[],
+): ScoredMediaCandidate[] {
   const scored = candidates.map((candidate) => ({
+    ...scoreCandidate(profile, candidate),
     candidate,
-    breakdown: scoreCandidate(profile, candidate),
   }));
-  scored.sort((a, b) => b.breakdown.finalScore - a.breakdown.finalScore);
+  scored.sort((a, b) => b.finalScore - a.finalScore);
   return scored;
 }

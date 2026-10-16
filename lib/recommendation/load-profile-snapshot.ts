@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CinephileStatsRow } from '@/lib/imdb/build-dashboard-stats';
-import { buildUserVectorProfile } from '@/lib/recommendation/build-user-profile';
+import { buildUserRecommendationProfile } from '@/lib/recommendation/build-keyword-profile';
 import { cinephileRowsToUserRatings } from '@/lib/recommendation/map-rows';
+import { sparseToDense, vectorToPg } from '@/lib/recommendation/dense-keyword-vector';
 import { ALGORITHM_VERSION, type UserVectorProfile } from '@/lib/recommendation/types';
 
 type SnapshotRow = {
@@ -15,7 +16,8 @@ export async function loadOrBuildProfile(
   userId: string,
   rows: CinephileStatsRow[],
 ): Promise<UserVectorProfile | null> {
-  const built = buildUserVectorProfile(cinephileRowsToUserRatings(rows));
+  const ratings = cinephileRowsToUserRatings(rows);
+  const built = buildUserRecommendationProfile(ratings);
   if (!built) return null;
 
   const { data } = await supabase
@@ -33,12 +35,15 @@ export async function loadOrBuildProfile(
     return snap.profile_json as UserVectorProfile;
   }
 
+  const keywordVectorPg = vectorToPg(sparseToDense(built.keywordVector));
+
   await supabase.from('user_taste_profiles').upsert(
     {
       user_id: userId,
       algorithm_version: ALGORITHM_VERSION,
       profile_json: built,
       ratings_count: rows.length,
+      keyword_vector: keywordVectorPg,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'user_id' },

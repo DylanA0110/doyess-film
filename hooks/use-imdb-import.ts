@@ -1,12 +1,14 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import type { ImportedTitle } from '@/lib/imdb/types';
 import {
   PENDING_ENRICH_SESSION_KEY,
   runTmdbEnrichAfterImport,
   type EnrichProgressCallback,
 } from '@/lib/imdb/run-tmdb-enrich-batches';
+import { invalidateUserCinephileData } from '@/lib/invalidate-user-cinephile';
 
 type ImportResponse = {
   imported: number;
@@ -37,6 +39,7 @@ async function importImdbTitles(titles: ImportedTitle[]): Promise<ImportResponse
 
 export function useImdbImport(userId: string | undefined) {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   return useMutation({
     mutationFn: async ({
@@ -73,8 +76,9 @@ export function useImdbImport(userId: string | undefined) {
     },
     onSuccess: () => {
       if (userId) {
-        queryClient.invalidateQueries({ queryKey: ['cinephile-stats', userId] });
+        invalidateUserCinephileData(queryClient, userId);
       }
+      router.refresh();
     },
   });
 }

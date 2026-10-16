@@ -2,7 +2,7 @@
 -- Crea tablas, vista cinephile_stats, RLS y perfil al registrarse.
 --
 -- Solo para proyecto NUEVO. Si ya tienes tablas, NO vuelvas a pegar este archivo:
--- usa migraciones puntuales (p. ej. migrate-tmdb-enrichment.sql, migrate-user-daily-pick.sql).
+-- ejecuta supabase/migrate.sql una vez en el SQL Editor.
 
 -- Perfiles (vinculado a auth.users)
 create table if not exists public.profiles (
@@ -47,6 +47,8 @@ create table if not exists public.movies (
   crew_snapshot jsonb default '[]'::jsonb,
   enrichment_status text not null default 'pending',
   enrichment_attempted_at timestamptz,
+  tmdb_media_type text,
+  tmdb_keywords text[] default '{}'::text[],
   created_at timestamptz not null default now()
 );
 
@@ -91,6 +93,10 @@ create policy "user_ratings_update_own"
   on public.user_ratings for update
   using (auth.uid() = user_id);
 
+create policy "user_ratings_delete_own"
+  on public.user_ratings for delete
+  using (auth.uid() = user_id);
+
 -- Vista usada por el dashboard (DROP si cambia la definición de columnas)
 drop view if exists public.cinephile_stats;
 
@@ -106,6 +112,9 @@ select
   m.genres,
   m.directors,
   m.poster_path,
+  m.tmdb_id,
+  m.tmdb_media_type,
+  m.tmdb_keywords,
   m.enrichment_status,
   m.cast_snapshot,
   m.crew_snapshot,
@@ -115,6 +124,114 @@ from public.user_ratings ur
 inner join public.movies m on m.id = ur.movie_id;
 
 grant select on public.cinephile_stats to authenticated;
+
+-- Snapshot perfil recomendación (motor v3)
+create table if not exists public.user_taste_profiles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  algorithm_version int not null,
+  profile_json jsonb not null,
+  ratings_count int not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.user_taste_profiles enable row level security;
+
+drop policy if exists "user_taste_profiles_select_own" on public.user_taste_profiles;
+create policy "user_taste_profiles_select_own"
+  on public.user_taste_profiles for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "user_taste_profiles_insert_own" on public.user_taste_profiles;
+create policy "user_taste_profiles_insert_own"
+  on public.user_taste_profiles for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "user_taste_profiles_update_own" on public.user_taste_profiles;
+create policy "user_taste_profiles_update_own"
+  on public.user_taste_profiles for update
+  using (auth.uid() = user_id);
+
+drop policy if exists "user_taste_profiles_delete_own" on public.user_taste_profiles;
+create policy "user_taste_profiles_delete_own"
+  on public.user_taste_profiles for delete
+  using (auth.uid() = user_id);
+
+-- Fase 6 — pgvector + KPI cache
+create extension if not exists vector;
+
+alter table public.user_taste_profiles
+  add column if not exists keyword_vector vector(256);
+
+create table if not exists public.media_keyword_vectors (
+  tmdb_id int not null,
+  media_type text not null check (media_type in ('movie', 'tv')),
+  embedding vector(256) not null,
+  updated_at timestamptz not null default now(),
+  primary key (tmdb_id, media_type)
+);
+
+create index if not exists media_keyword_vectors_hnsw_idx
+  on public.media_keyword_vectors
+  using hnsw (embedding vector_cosine_ops);
+
+alter table public.media_keyword_vectors enable row level security;
+
+drop policy if exists "media_keyword_vectors_select_authenticated" on public.media_keyword_vectors;
+create policy "media_keyword_vectors_select_authenticated"
+  on public.media_keyword_vectors for select
+  to authenticated
+  using (true);
+
+drop policy if exists "media_keyword_vectors_write_authenticated" on public.media_keyword_vectors;
+create policy "media_keyword_vectors_write_authenticated"
+  on public.media_keyword_vectors for all
+  to authenticated
+  using (true)
+  with check (true);
+
+create or replace function public.match_media_neighbors(
+  query_embedding vector(256),
+  match_count int default 20
+)
+returns table (
+  tmdb_id int,
+  media_type text,
+  similarity float
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    m.tmdb_id,
+    m.media_type,
+    1 - (m.embedding <=> query_embedding) as similarity
+  from public.media_keyword_vectors m
+  order by m.embedding <=> query_embedding
+  limit greatest(1, least(match_count, 50));
+$$;
+
+grant execute on function public.match_media_neighbors(vector, int) to authenticated;
+
+create table if not exists public.user_kpi_cache (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  ratings_count int not null,
+  stats_json jsonb not null,
+  refreshed_at timestamptz not null default now()
+);
+
+alter table public.user_kpi_cache enable row level security;
+
+drop policy if exists "user_kpi_cache_select_own" on public.user_kpi_cache;
+create policy "user_kpi_cache_select_own"
+  on public.user_kpi_cache for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "user_kpi_cache_delete_own" on public.user_kpi_cache;
+create policy "user_kpi_cache_delete_own"
+  on public.user_kpi_cache for delete
+  using (auth.uid() = user_id);
 
 -- Película del día (persistencia por usuario y fecha)
 create table if not exists public.user_daily_picks (

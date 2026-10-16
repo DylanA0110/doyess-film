@@ -1,9 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import { BarChart3, Download, Upload } from 'lucide-react';
+import { BarChart3, Download, Star, Upload } from 'lucide-react';
 import { DashboardCsvDropzone } from '@/components/dashboard/dashboard-csv-dropzone';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRateFlowStore } from '@/stores/rate-flow-store';
 
 type DashboardEmptyStateProps = {
   userName: string;
@@ -14,14 +15,14 @@ type DashboardEmptyStateProps = {
 const STEPS = [
   {
     n: '01',
-    title: 'Exporta tus calificaciones',
-    body: 'Descarga el CSV desde tu lista de calificaciones en IMDb.',
-    icon: Download,
+    title: 'Califica en la app',
+    body: 'Busca una película o serie y guarda tu nota del 1 al 10.',
+    icon: Star,
   },
   {
     n: '02',
-    title: 'Importa tu CSV',
-    body: 'Sube el archivo aquí y lo sincronizamos con tu cuenta.',
+    title: 'O importa IMDb',
+    body: '¿Ya tienes historial? Sube tu CSV y lo sincronizamos.',
     icon: Upload,
   },
   {
@@ -37,6 +38,8 @@ export function DashboardEmptyState({
   userId,
   schemaWarning,
 }: DashboardEmptyStateProps) {
+  const requestSearchFocus = useRateFlowStore((s) => s.requestSearchFocus);
+
   return (
     <div className="space-y-10">
       {schemaWarning ? (
@@ -46,9 +49,9 @@ export function DashboardEmptyState({
         >
           <p className="font-medium">Base de datos pendiente en Supabase</p>
           <p className="mt-1 text-xs leading-relaxed text-amber-100/75">
-            Ejecuta el archivo <code className="text-amber-50">supabase/schema.sql</code> en el
-            SQL Editor antes de importar el CSV (tablas <code>movies</code> y{' '}
-            <code>user_ratings</code>).
+            Ejecuta <code className="text-amber-50">supabase/migrate.sql</code> (o{' '}
+            <code className="text-amber-50">schema.sql</code> si el proyecto es nuevo) en el SQL
+            Editor antes de calificar o importar CSV.
           </p>
         </div>
       ) : null}
@@ -62,9 +65,17 @@ export function DashboardEmptyState({
             Tu historia cinematográfica empieza aquí
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-400 sm:text-base">
-            Este panel se personaliza con tus propias calificaciones de IMDb. Importa tu historial
-            y descubre patrones en géneros, directores y distribución de notas.
+            Califica tus títulos favoritos o importa tu CSV de IMDb. En ambos casos construimos tu
+            perfil de gustos y te mostramos patrones en géneros, directores y notas.
           </p>
+          <button
+            type="button"
+            onClick={() => requestSearchFocus()}
+            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#8A0201] px-6 py-3 text-sm font-semibold text-white shadow-[0_0_24px_rgba(138,2,1,0.35)] transition hover:bg-[#a30302]"
+          >
+            <Star className="size-4 fill-amber-200 text-amber-200" />
+            Calificar mi primer título
+          </button>
         </div>
         <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/8 bg-[#101009] shadow-[0_24px_64px_rgba(0,0,0,0.45)]">
           <Image
@@ -80,7 +91,28 @@ export function DashboardEmptyState({
         </div>
       </section>
 
-      <DashboardCsvDropzone userId={userId} />
+      <section className="rounded-2xl border border-white/8 bg-[#101009]/60 p-6 sm:p-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-[#F4F6F3]">¿Ya tienes IMDb?</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Importa tu exportación CSV como camino alternativo.
+            </p>
+          </div>
+          <a
+            href="https://www.imdb.com/list/export"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-xs font-medium text-[#8A0201] hover:underline"
+          >
+            <Download className="size-3.5" />
+            Cómo exportar desde IMDb
+          </a>
+        </div>
+        <div className="mt-6">
+          <DashboardCsvDropzone userId={userId} />
+        </div>
+      </section>
 
       <section>
         <h2 className="text-lg font-semibold text-[#F4F6F3]">¿Cómo funciona?</h2>

@@ -11,6 +11,9 @@ type DashboardPaginatedSectionProps<T> = {
   emptyMessage?: string;
   renderItem: (item: T) => React.ReactNode;
   gridClassName?: string;
+  headerAction?: React.ReactNode;
+  /** Si se define, solo muestra N ítems (p. ej. vista previa en resumen). */
+  previewCount?: number;
 };
 
 export function DashboardPaginatedSection<T>({
@@ -20,10 +23,12 @@ export function DashboardPaginatedSection<T>({
   emptyMessage = 'Sin datos todavía.',
   renderItem,
   gridClassName = 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3',
+  headerAction,
+  previewCount,
 }: DashboardPaginatedSectionProps<T>) {
   const [visible, setVisible] = React.useState(PAGE_SIZE);
-  const shown = items.slice(0, visible);
-  const hasMore = visible < items.length;
+  const shown = items.slice(0, previewCount != null ? previewCount : visible);
+  const hasMore = previewCount == null && visible < items.length;
 
   return (
     <section>
@@ -32,9 +37,12 @@ export function DashboardPaginatedSection<T>({
           <h2 className="text-base font-semibold text-[#F4F6F3]">{title}</h2>
           {subtitle ? <p className="mt-1 text-sm text-zinc-400">{subtitle}</p> : null}
         </div>
-        {items.length > 0 ? (
-          <p className="text-xs text-zinc-500">{items.length} en total</p>
-        ) : null}
+        <div className="flex items-center gap-3">
+          {items.length > 0 ? (
+            <p className="text-xs text-zinc-500">{items.length} en total</p>
+          ) : null}
+          {headerAction}
+        </div>
       </div>
 
       {items.length === 0 ? (

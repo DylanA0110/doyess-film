@@ -91,3 +91,53 @@ export function percentile(sorted: number[], p: number): number {
   const idx = Math.floor((sorted.length - 1) * p);
   return sorted[Math.max(0, idx)];
 }
+
+/** Peso temporal: halfLifeDays → 50% de peso (default ~3 años). */
+export function exponentialTimeDecayWeight(
+  daysSince: number,
+  halfLifeDays = 1095,
+): number {
+  if (daysSince <= 0) return 1;
+  if (halfLifeDays <= 0) return 0;
+  return Math.exp(-(Math.LN2 / halfLifeDays) * daysSince);
+}
+
+export function daysSinceDate(dateIso: string | null, now = new Date()): number {
+  if (!dateIso?.trim()) return 0;
+  const rated = new Date(dateIso);
+  if (Number.isNaN(rated.getTime())) return 0;
+  const ms = now.getTime() - rated.getTime();
+  return Math.max(0, ms / (1000 * 60 * 60 * 24));
+}
+
+export function cosineSimilaritySparse(
+  vecA: Record<string, number>,
+  vecB: Record<string, number>,
+): number {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (const v of Object.values(vecA)) normA += v * v;
+  for (const v of Object.values(vecB)) normB += v * v;
+
+  const smaller = Object.keys(vecA).length <= Object.keys(vecB).length ? vecA : vecB;
+  const other = smaller === vecA ? vecB : vecA;
+
+  for (const key of Object.keys(smaller)) {
+    const a = smaller[key] ?? 0;
+    const b = other[key] ?? 0;
+    dot += a * b;
+  }
+
+  const denom = Math.sqrt(normA) * Math.sqrt(normB);
+  if (denom === 0) return 0;
+  return dot / denom;
+}
+
+/** Nota ajustada (0–10) + confianza por volumen de votos → [0, 1]. */
+export function normalizeVoteQuality(voteAverageAdj: number, voteCount: number): number {
+  const avgNorm = Math.min(1, Math.max(0, voteAverageAdj / 10));
+  const countNorm = Math.min(1, Math.log10(Math.max(voteCount, 1)) / 4);
+  return avgNorm * 0.65 + countNorm * 0.35;
+}

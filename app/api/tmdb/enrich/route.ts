@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connection } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { enrichMovieFromImdbId } from '@/lib/tmdb/enrich-movie';
+import { upsertMediaKeywordVector } from '@/lib/recommendation/sync-media-keyword-vector';
 import { ENRICH_BATCH_SIZE } from '@/lib/tmdb/enrich-batch';
 import {
   isTerminalEnrichmentStatus,
@@ -168,6 +169,8 @@ export async function POST(request: NextRequest) {
         .from('movies')
         .update({
           tmdb_id: payload.tmdb_id,
+          tmdb_media_type: payload.tmdb_media_type,
+          tmdb_keywords: payload.tmdb_keywords,
           poster_path: payload.poster_path,
           backdrop_path: payload.backdrop_path,
           cast_snapshot: payload.cast_snapshot,
@@ -183,6 +186,15 @@ export async function POST(request: NextRequest) {
         errors.push(`${imdbId}: ${updateError.message}`);
         continue;
       }
+
+      await upsertMediaKeywordVector(
+        supabase,
+        payload.tmdb_id,
+        payload.tmdb_media_type,
+        payload.tmdb_keywords,
+      ).catch(() => {
+        /* pgvector opcional si falta migración Fase 6 */
+      });
 
       enriched += 1;
     } catch (err) {

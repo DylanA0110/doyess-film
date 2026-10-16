@@ -1,5 +1,6 @@
 import type { TmdbCastSnapshotEntry, TmdbCrewSnapshotEntry } from '@/lib/tmdb/types';
 import { findTmdbByImdbId } from '@/lib/tmdb/find-by-imdb';
+import { fetchTmdbKeywords } from '@/lib/tmdb/keywords';
 import { titleKindFromImdbType } from '@/lib/imdb/title-kind';
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
@@ -17,6 +18,7 @@ export type EnrichedMoviePayload = {
   backdrop_path: string | null;
   cast_snapshot: TmdbCastSnapshotEntry[];
   crew_snapshot: TmdbCrewSnapshotEntry[];
+  tmdb_keywords: string[];
 };
 
 export async function enrichMovieFromImdbId(
@@ -48,6 +50,7 @@ export async function enrichMovieFromImdbId(
       backdrop_path: found.backdrop_path,
       cast_snapshot: [],
       crew_snapshot: [],
+      tmdb_keywords: [],
     };
   }
 
@@ -115,6 +118,8 @@ export async function enrichMovieFromImdbId(
     10,
   );
 
+  const tmdb_keywords = await fetchTmdbKeywords(found.mediaType, found.id);
+
   return {
     tmdb_id: found.id,
     tmdb_media_type: found.mediaType,
@@ -122,5 +127,6 @@ export async function enrichMovieFromImdbId(
     backdrop_path: data.backdrop_path ?? found.backdrop_path,
     cast_snapshot,
     crew_snapshot,
+    tmdb_keywords,
   };
 }

@@ -50,7 +50,7 @@ export function DashboardCsvDropzone({ userId }: DashboardCsvDropzoneProps) {
       const raw = err instanceof Error ? err.message : 'Error al procesar el CSV';
       if (raw.includes("table 'public.movies'") || raw.includes('schema cache')) {
         setError(
-          'Faltan tablas en Supabase. Ejecuta supabase/schema.sql en el SQL Editor y vuelve a importar.',
+          'Faltan tablas en Supabase. Ejecuta supabase/migrate.sql en el SQL Editor y vuelve a importar.',
         );
         return;
       }

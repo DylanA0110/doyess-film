@@ -1,0 +1,1 @@
+-- Obsoleto: ejecuta supabase/migrate.sql (único archivo de migración).
