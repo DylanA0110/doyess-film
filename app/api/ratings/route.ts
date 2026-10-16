@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { invalidateExplorePageCache } from '@/lib/cache/explore-cache';
 import { persistUserRating } from '@/lib/ratings/persist-user-rating';
 import type { TmdbMediaType } from '@/lib/tmdb/find-by-imdb';
 
@@ -48,6 +49,8 @@ export async function POST(request: NextRequest) {
       mediaType,
       rating,
     });
+
+    await invalidateExplorePageCache(user.id);
 
     return NextResponse.json({
       ok: true,

@@ -5,17 +5,29 @@ import { queryKeys } from '@/lib/query-keys';
 import type { MediaDetailPayload } from '@/lib/tmdb/media-detail';
 import type { TmdbMediaType } from '@/lib/tmdb/find-by-imdb';
 
+export type MediaDetailQueryResult = {
+  detail: MediaDetailPayload;
+  userRating: number | null;
+};
+
 async function fetchMediaDetail(
   mediaType: TmdbMediaType,
   tmdbId: number,
-): Promise<MediaDetailPayload> {
+): Promise<MediaDetailQueryResult> {
   const response = await fetch(
     `/api/tmdb/detail?type=${mediaType}&id=${tmdbId}`,
   );
-  const data = (await response.json()) as { detail?: MediaDetailPayload; error?: string };
+  const data = (await response.json()) as {
+    detail?: MediaDetailPayload;
+    userRating?: number | null;
+    error?: string;
+  };
   if (!response.ok) throw new Error(data.error ?? 'Error al cargar ficha');
   if (!data.detail) throw new Error('Sin datos');
-  return data.detail;
+  return {
+    detail: data.detail,
+    userRating: data.userRating ?? null,
+  };
 }
 
 export function useMediaDetail(

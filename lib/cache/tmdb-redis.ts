@@ -36,6 +36,16 @@ export async function tmdbCacheSet(
   }
 }
 
+export async function tmdbCacheDel(key: string): Promise<void> {
+  const client = getRedis();
+  if (!client) return;
+  try {
+    await client.del(key);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function tmdbCacheKey(kind: 'movie' | 'tv' | 'search' | 'discover', id: string): string {
   return `tmdb:${kind}:${id}`;
 }

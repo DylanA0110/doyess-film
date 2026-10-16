@@ -9,6 +9,7 @@ export function exploreCardToDetailTarget(item: ExploreCardItem): MovieDetailTar
     title: item.title,
     year: item.year,
     posterUrl: item.posterUrl,
+    userRating: item.userRating ?? undefined,
   };
 }
 

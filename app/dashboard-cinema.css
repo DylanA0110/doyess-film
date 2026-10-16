@@ -639,6 +639,34 @@
   background: rgba(138, 2, 1, 0.12);
 }
 
+.df-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #0a0a09;
+  padding: 0.5rem 0.65rem;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.df-title-row:not(:disabled):hover {
+  border-color: rgba(138, 2, 1, 0.35);
+  background: #101009;
+}
+
+.df-title-row__poster {
+  position: relative;
+  height: 3.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 0.35rem;
+  background: #050000;
+}
+
 /* —— Glass + blob póster —— */
 .df-poster-grid {
   display: grid;

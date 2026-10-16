@@ -37,23 +37,36 @@ export function MovieDetailDialog({
   target,
   userId,
 }: MovieDetailDialogProps) {
-  const { data: detail, isLoading, isError } = useMediaDetail(
+  const { data, isLoading, isError } = useMediaDetail(
     target?.mediaType,
     target?.tmdbId,
     open && Boolean(target),
   );
+  const detail = data?.detail;
   const submitRating = useSubmitRating(userId);
   const [draft, setDraft] = React.useState<number | null>(null);
   const [gustosNotice, setGustosNotice] = React.useState(false);
 
+  const resolvedRating =
+    draft ??
+    data?.userRating ??
+    target?.userRating ??
+    null;
+
   React.useEffect(() => {
     if (open && target) {
-      setDraft(target.userRating ?? null);
+      setDraft(target.userRating ?? data?.userRating ?? null);
     } else if (!open) {
       setDraft(null);
       setGustosNotice(false);
     }
-  }, [open, target?.tmdbId, target?.userRating, target]);
+  }, [open, target?.tmdbId, target?.userRating, target, data?.userRating]);
+
+  React.useEffect(() => {
+    if (open && data?.userRating != null && draft == null) {
+      setDraft(data.userRating);
+    }
+  }, [open, data?.userRating, draft]);
 
   const title = detail?.title ?? target?.title ?? 'Título';
   const overview = detail?.overview?.trim();
@@ -74,7 +87,6 @@ export function MovieDetailDialog({
       {
         onSuccess: () => {
           setGustosNotice(true);
-          window.setTimeout(() => onOpenChange(false), 1400);
         },
       },
     );
@@ -83,33 +95,53 @@ export function MovieDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[min(92vh,44rem)] w-[calc(100vw-1rem)] max-w-lg overflow-y-auto overscroll-contain border border-white/10 bg-[#101009] p-0 text-[#F4F6F3] sm:w-full"
+        className="max-h-[min(94vh,46rem)] w-[calc(100vw-0.75rem)] max-w-xl overflow-y-auto overscroll-contain border border-white/10 bg-[#101009] p-0 text-[#F4F6F3] sm:w-full"
         showCloseButton
       >
-        <DialogHeader className="border-b border-white/[0.06] px-4 pb-4 pt-5 pr-12 sm:px-5">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
-            {mediaLabel}
-          </p>
-          <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
-          <p className="text-sm text-zinc-500">
-            {detail?.year ?? target?.year ?? '—'}
-            {detail?.genres?.length ? ` · ${detail.genres.slice(0, 4).join(', ')}` : ''}
-          </p>
-        </DialogHeader>
+        <div className="border-b border-white/[0.06] px-4 pb-4 pt-5 pr-12 sm:px-5">
+          <DialogHeader className="space-y-1 p-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+              {mediaLabel}
+            </p>
+            <DialogTitle className="text-xl font-semibold leading-tight sm:text-2xl">
+              {title}
+            </DialogTitle>
+            <p className="text-sm text-zinc-500">
+              {detail?.year ?? target?.year ?? '—'}
+              {detail?.genres?.length ? ` · ${detail.genres.slice(0, 4).join(', ')}` : ''}
+            </p>
+          </DialogHeader>
 
-        <div className="flex flex-col gap-4 px-4 pb-6 sm:flex-row sm:px-5">
+          {resolvedRating != null ? (
+            <div
+              className="mt-4 flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2"
+              role="status"
+            >
+              <Star className="size-4 shrink-0 fill-amber-400 text-amber-400" aria-hidden />
+              <p className="text-sm text-[#F4F6F3]">
+                <span className="font-semibold">Tu calificación</span>
+                <span className="ml-1.5 text-lg font-bold tabular-nums text-amber-400">
+                  {resolvedRating}
+                </span>
+                <span className="text-zinc-500"> /10</span>
+              </p>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-zinc-500">Aún no calificaste este título en Doyess.</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-5 px-4 py-5 sm:flex-row sm:px-5">
           {poster ? (
-            <div className="relative mx-auto h-40 w-[7.5rem] shrink-0 overflow-hidden rounded-md ring-1 ring-white/10 sm:mx-0 sm:h-44 sm:w-32">
-              <Image src={poster} alt={title} fill sizes="128px" className="object-cover" />
+            <div className="df-magic-card mx-auto w-[min(100%,11rem)] shrink-0 sm:mx-0">
+              <div className="df-magic-card__inner">
+                <div className="df-magic-card__poster aspect-[2/3]">
+                  <Image src={poster} alt={title} fill sizes="176px" className="object-cover" />
+                </div>
+              </div>
             </div>
           ) : null}
           <div className="min-w-0 flex-1 space-y-4">
-            {target?.userRating != null && draft === target.userRating ? (
-              <p className="flex items-center gap-2 text-sm text-zinc-300">
-                <Star className="size-4 fill-amber-400 text-amber-400" />
-                Tu nota: <span className="font-semibold tabular-nums">{target.userRating}</span>
-              </p>
-            ) : null}
             {isLoading ? (
               <p className="text-sm text-zinc-500">Cargando sinopsis…</p>
             ) : isError ? (
@@ -121,8 +153,8 @@ export function MovieDetailDialog({
             )}
             {target ? (
               <div className="border-t border-white/8 pt-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-                  Calificar esto
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  {resolvedRating != null ? 'Cambiar tu nota' : 'Calificar'}
                 </p>
                 <div className="mt-3">
                   <StarRating

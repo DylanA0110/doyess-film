@@ -33,6 +33,10 @@ import type { TitleKindTasteSlice } from '@/lib/recommendation/types';
 import type { MediaCandidate } from '@/lib/recommendation/media-candidate';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+/** Títulos visibles por carril (paginación ligera en cliente). */
+export const EXPLORE_LANE_ITEM_LIMIT = 6;
+const EXPLORE_RANK_POOL_SIZE = 10;
+
 export type ExploreCardItem = {
   mediaRef: MediaRef;
   tmdbId: number;
@@ -44,6 +48,7 @@ export type ExploreCardItem = {
   matchBadge: string;
   vibeTags: string[];
   reason: string;
+  userRating?: number | null;
 };
 
 export type ExploreLanePayload = {
@@ -136,7 +141,7 @@ async function rankDiscoverPool(
   const partial = [...unseen]
     .map((c) => ({ c, partial: scoreCandidatePartial(profile, c) }))
     .sort((a, b) => b.partial - a.partial)
-    .slice(0, 18)
+    .slice(0, 12)
     .map((x) => x.c);
 
   await mapWithConcurrency(partial, 6, async (candidate) => {
@@ -167,9 +172,9 @@ async function laneGenreBayes(
     { kind: 'genre', genreName, page },
     profile,
     seenIds,
-    { topN: 10, mediaTypes: ['movie', 'tv'], supabase },
+    { topN: EXPLORE_RANK_POOL_SIZE, mediaTypes: ['movie', 'tv'], supabase },
   );
-  const items = takeUnique(profile, ranked, used, 8);
+  const items = takeUnique(profile, ranked, used, EXPLORE_LANE_ITEM_LIMIT);
   if (items.length === 0) return null;
 
   return {
@@ -230,7 +235,7 @@ async function laneSeries(
       return b.finalScore - a.finalScore;
     });
 
-  const items = takeUnique(profile, reordered, used, 8);
+  const items = takeUnique(profile, reordered, used, EXPLORE_LANE_ITEM_LIMIT);
   if (items.length === 0) return null;
 
   const genreLabel =
@@ -274,7 +279,7 @@ async function laneHiddenGems(
       r.candidate.voteCount <= HIDDEN_GEM_VOTE_MAX &&
       r.breakdown.hiddenGemMultiplier > 1,
   );
-  const items = takeUnique(profile, gems, used, 10);
+  const items = takeUnique(profile, gems, used, EXPLORE_LANE_ITEM_LIMIT);
   if (items.length < 4) return null;
 
   return {
@@ -301,9 +306,9 @@ async function laneMicroGenre(
     { kind: 'keyword', tmdbKeywordId: keywordId, page: 1 },
     profile,
     seenIds,
-    { topN: 10, mediaTypes: ['movie', 'tv'], supabase },
+    { topN: EXPLORE_RANK_POOL_SIZE, mediaTypes: ['movie', 'tv'], supabase },
   );
-  const items = takeUnique(profile, ranked, used, 8);
+  const items = takeUnique(profile, ranked, used, EXPLORE_LANE_ITEM_LIMIT);
   if (items.length === 0) return null;
 
   return {
@@ -344,7 +349,7 @@ async function laneDirectorCircle(
     (r) =>
       (r.candidate.director?.trim().toLowerCase() ?? '') !== director.trim().toLowerCase(),
   );
-  const items = takeUnique(profile, filtered, used, 8);
+  const items = takeUnique(profile, filtered, used, EXPLORE_LANE_ITEM_LIMIT);
   if (items.length === 0) return null;
 
   return {
@@ -377,9 +382,9 @@ async function laneInsightPattern(
     { kind: 'genre', genreName, page: page + 1 },
     profile,
     seenIds,
-    { topN: 10, mediaTypes: ['movie', 'tv'], supabase },
+    { topN: EXPLORE_RANK_POOL_SIZE, mediaTypes: ['movie', 'tv'], supabase },
   );
-  const items = takeUnique(profile, ranked, used, 6);
+  const items = takeUnique(profile, ranked, used, EXPLORE_LANE_ITEM_LIMIT);
   if (items.length === 0) return null;
 
   return {
@@ -411,11 +416,11 @@ async function laneWildcard(
       voteCountMin: 500,
       sortBy: 'vote_average.desc',
     },
-    20,
+    EXPLORE_RANK_POOL_SIZE,
   );
 
   const wild = ranked.filter((r) => computeDisplayAffinity(profile, r.candidate) < 0.2);
-  const items = takeUnique(profile, wild, used, 8);
+  const items = takeUnique(profile, wild, used, EXPLORE_LANE_ITEM_LIMIT);
   if (items.length === 0) return null;
 
   return {
@@ -471,12 +476,39 @@ async function heroFromDailyPick(
   };
 }
 
+function attachUserRatings(
+  rows: CinephileStatsRow[],
+  payload: ExplorePagePayload,
+): ExplorePagePayload {
+  const byRef = new Map<MediaRef, number>();
+  for (const row of rows) {
+    if (!row.tmdb_id || row.rating == null) continue;
+    const ref: MediaRef =
+      row.tmdb_media_type === 'tv' ? `t_${row.tmdb_id}` : `m_${row.tmdb_id}`;
+    byRef.set(ref, row.rating);
+  }
+
+  const enrich = (item: ExploreCardItem): ExploreCardItem => ({
+    ...item,
+    userRating: byRef.get(item.mediaRef) ?? item.userRating ?? null,
+  });
+
+  return {
+    hero: payload.hero ? { ...payload.hero, item: enrich(payload.hero.item) } : null,
+    lanes: payload.lanes.map((lane) => ({
+      ...lane,
+      items: lane.items.map(enrich),
+    })),
+  };
+}
+
 export async function buildExplorePage(
   profile: UserVectorProfile,
   seenIds: ReadonlySet<MediaRef>,
   supabase: SupabaseClient,
   dailyPick: DailyPickResult | null,
   userId: string,
+  historyRows: CinephileStatsRow[] = [],
 ): Promise<ExplorePagePayload> {
   const used = new Set<MediaRef>();
   const lanes: ExploreLanePayload[] = [];
@@ -524,76 +556,33 @@ export async function buildExplorePage(
   const wild = await laneWildcard(profile, seenIds, used, page + 1);
   if (wild) lanes.push(wild);
 
-  const hero = await pickDynamicExploreHero(profile, lanes);
+  const hero = pickDynamicExploreHero(lanes);
   if (hero) {
     used.add(hero.item.mediaRef);
   }
 
-  return { hero, lanes };
+  return attachUserRatings(historyRows, { hero, lanes });
 }
 
-/** Hero siempre desde el mejor candidato actual (sin pick diario cacheado). */
-async function pickDynamicExploreHero(
-  profile: UserVectorProfile,
+/** Hero desde el primer destacado de carril (sin TMDB extra). */
+function pickDynamicExploreHero(
   lanes: ExploreLanePayload[],
-): Promise<ExplorePagePayload['hero'] | null> {
-  const seenRefs = new Set<MediaRef>();
-  const pool: ExploreCardItem[] = [];
+): ExplorePagePayload['hero'] | null {
   for (const lane of lanes) {
-    for (const item of lane.items.slice(0, 5)) {
-      if (seenRefs.has(item.mediaRef)) continue;
-      seenRefs.add(item.mediaRef);
-      pool.push(item);
-    }
+    const item = lane.items[0];
+    if (!item) continue;
+    const explain =
+      item.vibeTags.length > 0 &&
+      !item.reason.toLowerCase().includes(item.vibeTags[0].toLowerCase())
+        ? `${item.reason} · ${item.vibeTags.slice(0, 2).join(' · ')}`
+        : item.reason;
+    return {
+      item,
+      explain,
+      badgeLabel: item.matchBadge,
+    };
   }
-  if (pool.length === 0) return null;
-
-  let best: {
-    card: ExploreCardItem;
-    affinity: number;
-    finalScore: number;
-    explain: string;
-    badge: string;
-  } | null = null;
-
-  for (const item of pool) {
-    const detail = await fetchTmdbMediaDetail(item.mediaType, item.tmdbId);
-    if (!detail) continue;
-    const candidate = mediaCandidateFromDetail(detail);
-    if (candidate.keywords.length === 0) {
-      candidate.keywords = await fetchTmdbKeywords(item.mediaType, item.tmdbId);
-    }
-    const scored = scoreCandidate(profile, candidate);
-    const affinity = computeDisplayAffinity(profile, candidate);
-    const card = rankedToCard(profile, { ...scored, candidate });
-    const better =
-      !best ||
-      affinity > best.affinity ||
-      (affinity === best.affinity && scored.finalScore > best.finalScore);
-    if (better) {
-      best = {
-        card,
-        affinity,
-        finalScore: scored.finalScore,
-        explain: scored.reason,
-        badge: card.matchBadge,
-      };
-    }
-  }
-
-  if (!best) return null;
-
-  const explain =
-    best.card.vibeTags.length > 0 &&
-    !best.explain.toLowerCase().includes(best.card.vibeTags[0].toLowerCase())
-      ? `${best.explain} · ${best.card.vibeTags.slice(0, 2).join(' · ')}`
-      : best.explain;
-
-  return {
-    item: best.card,
-    explain,
-    badgeLabel: best.badge,
-  };
+  return null;
 }
 
 export function exploreContextFromRows(rows: CinephileStatsRow[]) {

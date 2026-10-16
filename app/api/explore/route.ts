@@ -4,6 +4,10 @@ import { getCachedDailyPickResult } from '@/lib/dashboard/daily-pick-cache';
 import { loadCinephileStatsRows } from '@/lib/supabase/load-cinephile-stats';
 import { loadOrBuildProfile } from '@/lib/recommendation/load-profile-snapshot';
 import {
+  getExplorePageCache,
+  setExplorePageCache,
+} from '@/lib/cache/explore-cache';
+import {
   buildExplorePage,
   exploreContextFromRows,
 } from '@/lib/recommendation/lanes/build-explore-lanes';
@@ -29,13 +33,26 @@ export async function GET() {
     return NextResponse.json({ hero: null, lanes: [] });
   }
 
+  const cached = await getExplorePageCache(user.id);
+  if (cached) {
+    return NextResponse.json(cached, {
+      headers: {
+        'Cache-Control': 'private, max-age=300',
+        'X-Explore-Cache': 'hit',
+      },
+    });
+  }
+
   const { seenIds } = exploreContextFromRows(rows);
   const dailyPick = await getCachedDailyPickResult(supabase, user.id);
-  const payload = await buildExplorePage(profile, seenIds, supabase, dailyPick, user.id);
+  const payload = await buildExplorePage(profile, seenIds, supabase, dailyPick, user.id, rows);
+
+  await setExplorePageCache(user.id, payload);
 
   return NextResponse.json(payload, {
     headers: {
       'Cache-Control': 'private, max-age=300',
+      'X-Explore-Cache': 'miss',
     },
   });
 }

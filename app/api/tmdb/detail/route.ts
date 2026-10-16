@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { lookupUserRatingByTmdb } from '@/lib/ratings/lookup-user-rating-by-tmdb';
 import { fetchTmdbMediaDetail } from '@/lib/tmdb/media-detail';
 import type { TmdbMediaType } from '@/lib/tmdb/find-by-imdb';
 
@@ -31,7 +32,13 @@ export async function GET(request: Request) {
     if (!detail) {
       return NextResponse.json({ error: 'Título no encontrado' }, { status: 404 });
     }
-    return NextResponse.json({ detail });
+    const userRating = await lookupUserRatingByTmdb(supabase, user.id, type, tmdbId);
+    return NextResponse.json(
+      { detail, userRating },
+      {
+        headers: { 'Cache-Control': 'private, max-age=120' },
+      },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error al cargar detalle';
     return NextResponse.json({ error: message }, { status: 500 });
